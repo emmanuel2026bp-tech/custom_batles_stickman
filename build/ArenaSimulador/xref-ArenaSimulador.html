@@ -77,6 +77,7 @@ imports:
  &#8226;   <a href="#_weakrefset">_weakrefset</a>
  &#8226;   <a href="#abc">abc</a>
  &#8226;   <a href="#arena_background">arena_background</a>
+ &#8226;   <a href="#battle_hud">battle_hud</a>
  &#8226;   <a href="#codecs">codecs</a>
  &#8226;   <a href="#collections">collections</a>
  &#8226;   <a href="#collections.abc">collections.abc</a>
@@ -205,6 +206,7 @@ imports:
  &#8226;   <a href="#encodings.uu_codec">encodings.uu_codec</a>
  &#8226;   <a href="#encodings.zlib_codec">encodings.zlib_codec</a>
  &#8226;   <a href="#enum">enum</a>
+ &#8226;   <a href="#fighter">fighter</a>
  &#8226;   <a href="#functools">functools</a>
  &#8226;   <a href="#game_config">game_config</a>
  &#8226;   <a href="#genericpath">genericpath</a>
@@ -214,7 +216,6 @@ imports:
  &#8226;   <a href="#linecache">linecache</a>
  &#8226;   <a href="#locale">locale</a>
  &#8226;   <a href="#matchups">matchups</a>
- &#8226;   <a href="#math">math</a>
  &#8226;   <a href="#ntpath">ntpath</a>
  &#8226;   <a href="#operator">operator</a>
  &#8226;   <a href="#os">os</a>
@@ -237,7 +238,6 @@ imports:
  &#8226;   <a href="#traceback">traceback</a>
  &#8226;   <a href="#types">types</a>
  &#8226;   <a href="#ui_screens">ui_screens</a>
- &#8226;   <a href="#unit_visuals">unit_visuals</a>
  &#8226;   <a href="#warnings">warnings</a>
  &#8226;   <a href="#weakref">weakref</a>
 
@@ -396,7 +396,7 @@ imported by:
  &#8226;   <a href="#PIL._version">PIL._version</a>
  &#8226;   <a href="#PIL._webp">PIL._webp</a>
  &#8226;   <a href="#PIL.features">PIL.features</a>
- &#8226;   <a href="#arena_background">arena_background</a>
+ &#8226;   <a href="#terrain_builders">terrain_builders</a>
 
   </div>
 
@@ -1079,7 +1079,7 @@ imported by:
  &#8226;   <a href="#PIL.XbmImagePlugin">PIL.XbmImagePlugin</a>
  &#8226;   <a href="#PIL.XpmImagePlugin">PIL.XpmImagePlugin</a>
  &#8226;   <a href="#PIL.features">PIL.features</a>
- &#8226;   <a href="#arena_background">arena_background</a>
+ &#8226;   <a href="#terrain_builders">terrain_builders</a>
 
   </div>
 
@@ -3703,12 +3703,10 @@ imported by:
   <a target="code" href="///C:/Users/Usuario/OneDrive/Escritorio/custom_batles_stickman/arena_background.py" type="text/plain"><tt>arena_background</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
-    <a href="#PIL">PIL</a>
- &#8226;   <a href="#PIL.Image">PIL.Image</a>
- &#8226;   <a href="#math">math</a>
- &#8226;   <a href="#os">os</a>
+    <a href="#os">os</a>
  &#8226;   <a href="#pygame">pygame</a>
  &#8226;   <a href="#random">random</a>
+ &#8226;   <a href="#terrain_builders">terrain_builders</a>
 
   </div>
   <div class="import">
@@ -4785,6 +4783,25 @@ imported by:
 </div>
 
 <div class="node">
+  <a name="battle_hud"></a>
+  <a target="code" href="///C:/Users/Usuario/OneDrive/Escritorio/custom_batles_stickman/battle_hud.py" type="text/plain"><tt>battle_hud</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#game_config">game_config</a>
+ &#8226;   <a href="#matchups">matchups</a>
+ &#8226;   <a href="#pygame">pygame</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#simulador_main">simulador_main</a>
+ &#8226;   <a href="#simulador_main.py">simulador_main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
   <a name="bdb"></a>
   <a target="code" href="///C:/Program%20Files/WindowsApps/PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0/Lib/bdb.py" type="text/plain"><tt>bdb</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
@@ -5519,7 +5536,8 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#simulador_main">simulador_main</a>
+    <a href="#fighter">fighter</a>
+ &#8226;   <a href="#simulador_main">simulador_main</a>
  &#8226;   <a href="#simulador_main.py">simulador_main.py</a>
 
   </div>
@@ -9059,6 +9077,29 @@ imported by:
 </div>
 
 <div class="node">
+  <a name="fighter"></a>
+  <a target="code" href="///C:/Users/Usuario/OneDrive/Escritorio/custom_batles_stickman/fighter.py" type="text/plain"><tt>fighter</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#combat_effects">combat_effects</a>
+ &#8226;   <a href="#game_config">game_config</a>
+ &#8226;   <a href="#math">math</a>
+ &#8226;   <a href="#pygame">pygame</a>
+ &#8226;   <a href="#random">random</a>
+ &#8226;   <a href="#typing">typing</a>
+ &#8226;   <a href="#unit_visuals">unit_visuals</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#simulador_main">simulador_main</a>
+ &#8226;   <a href="#simulador_main.py">simulador_main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
   <a name="fileinput"></a>
   <a target="code" href="///C:/Program%20Files/WindowsApps/PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0/Lib/fileinput.py" type="text/plain"><tt>fileinput</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
@@ -9268,7 +9309,9 @@ imported by:
   <a target="code" href="///C:/Users/Usuario/OneDrive/Escritorio/custom_batles_stickman/game_config.py" type="text/plain"><tt>game_config</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
 imported by:
-    <a href="#combat_effects">combat_effects</a>
+    <a href="#battle_hud">battle_hud</a>
+ &#8226;   <a href="#combat_effects">combat_effects</a>
+ &#8226;   <a href="#fighter">fighter</a>
  &#8226;   <a href="#matchups">matchups</a>
  &#8226;   <a href="#simulador_main">simulador_main</a>
  &#8226;   <a href="#simulador_main.py">simulador_main.py</a>
@@ -9680,6 +9723,7 @@ imports:
  &#8226;   <a href="#importlib">importlib</a>
  &#8226;   <a href="#importlib._bootstrap">importlib._bootstrap</a>
  &#8226;   <a href="#importlib._bootstrap_external">importlib._bootstrap_external</a>
+ &#8226;   <a href="#importlib.machinery">importlib.machinery</a>
  &#8226;   <a href="#sys">sys</a>
  &#8226;   <a href="#warnings">warnings</a>
 
@@ -9816,7 +9860,8 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#importlib.abc">importlib.abc</a>
+    <a href="#importlib">importlib</a>
+ &#8226;   <a href="#importlib.abc">importlib.abc</a>
  &#8226;   <a href="#inspect">inspect</a>
  &#8226;   <a href="#pkgutil">pkgutil</a>
  &#8226;   <a href="#py_compile">py_compile</a>
@@ -10685,7 +10730,8 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#simulador_main">simulador_main</a>
+    <a href="#battle_hud">battle_hud</a>
+ &#8226;   <a href="#simulador_main">simulador_main</a>
  &#8226;   <a href="#simulador_main.py">simulador_main.py</a>
  &#8226;   <a href="#ui_screens">ui_screens</a>
 
@@ -10708,9 +10754,9 @@ imported by:
  &#8226;   <a href="#PIL.TiffImagePlugin">PIL.TiffImagePlugin</a>
  &#8226;   <a href="#_pydatetime">_pydatetime</a>
  &#8226;   <a href="#_pydecimal">_pydecimal</a>
- &#8226;   <a href="#arena_background">arena_background</a>
  &#8226;   <a href="#asyncio.windows_events">asyncio.windows_events</a>
  &#8226;   <a href="#combat_effects">combat_effects</a>
+ &#8226;   <a href="#fighter">fighter</a>
  &#8226;   <a href="#fractions">fractions</a>
  &#8226;   <a href="#numpy._core._internal">numpy._core._internal</a>
  &#8226;   <a href="#numpy._core.fromnumeric">numpy._core.fromnumeric</a>
@@ -10720,9 +10766,8 @@ imported by:
  &#8226;   <a href="#numpy.lib._index_tricks_impl">numpy.lib._index_tricks_impl</a>
  &#8226;   <a href="#random">random</a>
  &#8226;   <a href="#selectors">selectors</a>
- &#8226;   <a href="#simulador_main">simulador_main</a>
- &#8226;   <a href="#simulador_main.py">simulador_main.py</a>
  &#8226;   <a href="#statistics">statistics</a>
+ &#8226;   <a href="#terrain_builders">terrain_builders</a>
  &#8226;   <a href="#ui_screens">ui_screens</a>
  &#8226;   <a href="#unit_visuals">unit_visuals</a>
  &#8226;   <a href="#urllib.parse">urllib.parse</a>
@@ -18407,6 +18452,7 @@ imported by:
  &#8226;   <a href="#sysconfig">sysconfig</a>
  &#8226;   <a href="#tarfile">tarfile</a>
  &#8226;   <a href="#tempfile">tempfile</a>
+ &#8226;   <a href="#terrain_builders">terrain_builders</a>
  &#8226;   <a href="#threading">threading</a>
  &#8226;   <a href="#unittest.loader">unittest.loader</a>
  &#8226;   <a href="#unittest.main">unittest.main</a>
@@ -19028,7 +19074,9 @@ imports:
   <div class="import">
 imported by:
     <a href="#arena_background">arena_background</a>
+ &#8226;   <a href="#battle_hud">battle_hud</a>
  &#8226;   <a href="#combat_effects">combat_effects</a>
+ &#8226;   <a href="#fighter">fighter</a>
  &#8226;   <a href="#pygame">pygame</a>
  &#8226;   <a href="#pygame._data_classes">pygame._data_classes</a>
  &#8226;   <a href="#pygame._debug">pygame._debug</a>
@@ -19076,6 +19124,7 @@ imported by:
  &#8226;   <a href="#pygame.window">pygame.window</a>
  &#8226;   <a href="#simulador_main">simulador_main</a>
  &#8226;   <a href="#simulador_main.py">simulador_main.py</a>
+ &#8226;   <a href="#terrain_builders">terrain_builders</a>
  &#8226;   <a href="#ui_screens">ui_screens</a>
  &#8226;   <a href="#unit_visuals">unit_visuals</a>
 
@@ -20126,12 +20175,14 @@ imported by:
  &#8226;   <a href="#combat_effects">combat_effects</a>
  &#8226;   <a href="#email.generator">email.generator</a>
  &#8226;   <a href="#email.utils">email.utils</a>
+ &#8226;   <a href="#fighter">fighter</a>
  &#8226;   <a href="#matchups">matchups</a>
  &#8226;   <a href="#secrets">secrets</a>
  &#8226;   <a href="#simulador_main">simulador_main</a>
  &#8226;   <a href="#simulador_main.py">simulador_main.py</a>
  &#8226;   <a href="#statistics">statistics</a>
  &#8226;   <a href="#tempfile">tempfile</a>
+ &#8226;   <a href="#terrain_builders">terrain_builders</a>
  &#8226;   <a href="#ui_screens">ui_screens</a>
 
   </div>
@@ -20576,14 +20627,14 @@ imported by:
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
     <a href="#arena_background">arena_background</a>
+ &#8226;   <a href="#battle_hud">battle_hud</a>
  &#8226;   <a href="#combat_effects">combat_effects</a>
+ &#8226;   <a href="#fighter">fighter</a>
  &#8226;   <a href="#game_config">game_config</a>
  &#8226;   <a href="#matchups">matchups</a>
- &#8226;   <a href="#math">math</a>
  &#8226;   <a href="#pygame">pygame</a>
  &#8226;   <a href="#random">random</a>
  &#8226;   <a href="#ui_screens">ui_screens</a>
- &#8226;   <a href="#unit_visuals">unit_visuals</a>
 
   </div>
   <div class="import">
@@ -21249,6 +21300,27 @@ imported by:
 </div>
 
 <div class="node">
+  <a name="terrain_builders"></a>
+  <a target="code" href="///C:/Users/Usuario/OneDrive/Escritorio/custom_batles_stickman/terrain_builders.py" type="text/plain"><tt>terrain_builders</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#PIL">PIL</a>
+ &#8226;   <a href="#PIL.Image">PIL.Image</a>
+ &#8226;   <a href="#math">math</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#pygame">pygame</a>
+ &#8226;   <a href="#random">random</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#arena_background">arena_background</a>
+
+  </div>
+
+</div>
+
+<div class="node">
   <a name="textwrap"></a>
   <a target="code" href="///C:/Program%20Files/WindowsApps/PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0/Lib/textwrap.py" type="text/plain"><tt>textwrap</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
@@ -21688,6 +21760,7 @@ imported by:
  &#8226;   <a href="#charset_normalizer.models">charset_normalizer.models</a>
  &#8226;   <a href="#charset_normalizer.utils">charset_normalizer.utils</a>
  &#8226;   <a href="#combat_effects">combat_effects</a>
+ &#8226;   <a href="#fighter">fighter</a>
  &#8226;   <a href="#functools">functools</a>
  &#8226;   <a href="#importlib.metadata">importlib.metadata</a>
  &#8226;   <a href="#importlib.metadata._meta">importlib.metadata._meta</a>
@@ -21845,8 +21918,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#combat_effects">combat_effects</a>
- &#8226;   <a href="#simulador_main">simulador_main</a>
- &#8226;   <a href="#simulador_main.py">simulador_main.py</a>
+ &#8226;   <a href="#fighter">fighter</a>
 
   </div>
 

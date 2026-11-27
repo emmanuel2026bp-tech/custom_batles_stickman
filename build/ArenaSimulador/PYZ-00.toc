@@ -406,6 +406,9 @@
    'C:\\Program '
    'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\\Lib\\base64.py',
    'PYMODULE'),
+  ('battle_hud',
+   'C:\\Users\\Usuario\\OneDrive\\Escritorio\\custom_batles_stickman\\battle_hud.py',
+   'PYMODULE'),
   ('bdb',
    'C:\\Program '
    'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\\Lib\\bdb.py',
@@ -609,6 +612,9 @@
   ('email.utils',
    'C:\\Program '
    'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\\Lib\\email\\utils.py',
+   'PYMODULE'),
+  ('fighter',
+   'C:\\Users\\Usuario\\OneDrive\\Escritorio\\custom_batles_stickman\\fighter.py',
    'PYMODULE'),
   ('fileinput',
    'C:\\Program '
@@ -1505,6 +1511,9 @@
   ('tempfile',
    'C:\\Program '
    'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\\Lib\\tempfile.py',
+   'PYMODULE'),
+  ('terrain_builders',
+   'C:\\Users\\Usuario\\OneDrive\\Escritorio\\custom_batles_stickman\\terrain_builders.py',
    'PYMODULE'),
   ('textwrap',
    'C:\\Program '
