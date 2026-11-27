@@ -33,7 +33,6 @@ _FORMATION_RANK: dict[str, int] = {
 
 
 def _sync_background_to_screen(screen: pygame.Surface, bg: ArenaBackground) -> int:
-    """Sincroniza dimensiones y suelo del fondo si cambia el tamaño de pantalla."""
     w, h = screen.get_size()
     new_ground_y = h - 106
     if w != bg.width or h != bg.height or new_ground_y != bg.ground_y:
@@ -45,8 +44,6 @@ def _sync_background_to_screen(screen: pygame.Surface, bg: ArenaBackground) -> i
 
 
 class Fighter:
-    """Stickman simple del estilo del video con sus armas y animación al desarmarse."""
-
     def __init__(self, kind: str, team: str, x: float, ground_y: int, idx: int):
         cfg = UNIT_STATS.get(kind, UNIT_STATS["sword"])
         self.kind = kind
@@ -62,6 +59,7 @@ class Fighter:
         self.cooldown = float(cfg["cooldown"])
         self.arrow_block_chance = float(cfg.get("arrow_block_chance", 0.0))
         self.color: tuple[int, int, int] = cfg["color"]
+        self.team_color: tuple[int, int, int] = TEAM_COLORS.get(team, (255, 214, 54))
         self.vs_mult: dict[str, float] = dict(cfg.get("vs_mult", {}))
         self.atk_timer = 0.0
         self.hit_flash = 0.0
@@ -127,8 +125,7 @@ class Fighter:
         pieces: list[LimbPiece],
         rng: random.Random,
     ) -> None:
-        """Separa cuerpo, casco/sombrero, armaduras, escudo, accesorios y arma al morir."""
-        body_col = TEAM_COLORS.get(self.team, (255, 214, 54))
+        body_col = self.team_color
         steel_col = (222, 230, 242)
         heavy_steel_col = (188, 200, 218)
         trim_col = (112, 128, 152)
@@ -371,10 +368,9 @@ class Fighter:
         enemies: list["Fighter"],
         target: "Fighter",
     ) -> float:
-        """Calcula un empuje horizontal suave para unidades no-Archidon."""
         if self.kind == "archidon":
             return 0.0
-        min_sep = 22.0
+        min_sep = 16.0
         push = 0.0
         for other in allies + enemies:
             if other is self or not other.alive or other.kind == "archidon":
@@ -384,12 +380,12 @@ class Fighter:
             if 0.0 < adx < min_sep:
                 strength = (min_sep - adx) / min_sep
                 if other is target:
-                    push += math.copysign(strength * 0.45, dx)
+                    push += math.copysign(strength * 0.25, dx)
                 else:
-                    push += math.copysign(strength, dx)
+                    push += math.copysign(strength * 0.65, dx)
             elif adx == 0.0:
-                push += 0.35 if (self.idx % 2 == 0) else -0.35
-        return max(-1.2, min(1.2, push))
+                push += 0.2 if (self.idx % 2 == 0) else -0.2
+        return max(-0.85, min(0.85, push))
 
     def update(
         self,
@@ -424,13 +420,13 @@ class Fighter:
         crowd_push = self._compute_crowd_push(allies, enemies, target)
 
         if dist > self.attack_range:
-            move_vx = direction * self.speed + crowd_push * (self.speed * 0.65)
+            move_vx = direction * self.speed + crowd_push * (self.speed * 0.45)
             next_x = self.x + move_vx * dt
             self.x = max(60.0, min(float(world_w - 60), next_x))
             self.walk_phase += dt * (self.speed * 0.14)
         else:
             if self.kind != "archidon" and abs(crowd_push) > 0.08:
-                adjusted_x = self.x + crowd_push * (self.speed * 0.45) * dt
+                adjusted_x = self.x + crowd_push * (self.speed * 0.35) * dt
                 if abs(target.x - adjusted_x) <= self.attack_range:
                     self.x = max(60.0, min(float(world_w - 60), adjusted_x))
             if self.atk_timer <= 0.0:
@@ -455,9 +451,9 @@ class Fighter:
                     popups.append(
                         DamagePopup(
                             target.x + rng.uniform(-6.0, 6.0),
-                            float(self.ground_y - 44.0),
+                            float(target.ground_y - 44.0),
                             f"-{dmg_taken}",
-                            target.color,
+                            target.team_color,
                             vx=rng.uniform(-42.0, 42.0),
                             vy=-rng.uniform(85.0, 135.0),
                         )
@@ -482,7 +478,7 @@ class Fighter:
             font_small,
             kind=self.kind,
             team=self.team,
-            team_color=TEAM_COLORS.get(self.team, (255, 214, 54)),
+            team_color=self.team_color,
             x=self.x,
             ground_y=self.ground_y,
             hp=self.hp,
@@ -501,7 +497,6 @@ def _spawn_fighters(
     ground_y: int,
     rng: random.Random,
 ) -> list[Fighter]:
-    """Coloca Lanzatonio al frente, Sword en medio y Archidon atrás en cada ejército."""
     fighters: list[Fighter] = []
     center_x = world_w * 0.5
     front_a_x = center_x - 240.0
@@ -547,7 +542,6 @@ def _run_combat_loop(
     team_a_roster: list[str],
     team_b_roster: list[str],
 ) -> str:
-    """Ejecuta el combate en un terreno aleatorio y devuelve 'editor' o 'quit'."""
     bg.randomize_terrain(rng)
     fighters = _spawn_fighters(
         team_a_roster, team_b_roster, bg.world_w, bg.ground_y, rng
@@ -745,7 +739,7 @@ def _run_combat_loop(
             veil.fill((10, 12, 18, 125))
             screen.blit(veil, (0, 0))
 
-            panel_w, panel_h = 420, 126
+            panel_w, panel_h = min(420, max(280, w - 32)), 126
             panel = pygame.Surface((panel_w, panel_h), pygame.SRCALPHA)
             pygame.draw.rect(
                 panel,
@@ -771,18 +765,24 @@ def _run_combat_loop(
                 (panel_rect.centerx - title_surf.get_width() // 2, panel_rect.y + 14),
             )
 
-            pause_edit_btn.width, pause_edit_btn.height = 114, 34
-            pause_resume_btn.width, pause_resume_btn.height = 128, 34
-            pause_exit_btn.width, pause_exit_btn.height = 104, 34
+            btn_gap = 10
+            avail_btn_w = max(180, panel_w - 32 - btn_gap * 2)
+            pause_edit_btn.width = max(60, int(avail_btn_w * 0.32))
+            pause_resume_btn.width = max(72, int(avail_btn_w * 0.38))
+            pause_exit_btn.width = max(56, avail_btn_w - pause_edit_btn.width - pause_resume_btn.width)
+            pause_edit_btn.height = 34
+            pause_resume_btn.height = 34
+            pause_exit_btn.height = 34
+
             total_pw = (
-                pause_edit_btn.width + pause_resume_btn.width + pause_exit_btn.width + 20
+                pause_edit_btn.width + pause_resume_btn.width + pause_exit_btn.width + btn_gap * 2
             )
             p_start_x = panel_rect.centerx - total_pw // 2
             p_btn_y = panel_rect.y + 68
 
             pause_edit_btn.topleft = (p_start_x, p_btn_y)
-            pause_resume_btn.topleft = (pause_edit_btn.right + 10, p_btn_y)
-            pause_exit_btn.topleft = (pause_resume_btn.right + 10, p_btn_y)
+            pause_resume_btn.topleft = (pause_edit_btn.right + btn_gap, p_btn_y)
+            pause_exit_btn.topleft = (pause_resume_btn.right + btn_gap, p_btn_y)
 
             for r_btn, txt, base_c, hov_c in (
                 (pause_edit_btn, "Editar", (58, 66, 92), (82, 94, 128)),
@@ -814,7 +814,8 @@ def _run_combat_loop(
                 win_msg = "VICTORIA EQUIPO B"
                 win_col = TEAM_COLORS["B"]
 
-            box = pygame.Rect(w // 2 - 220, h // 2 - 68, 440, 136)
+            box_w = min(440, max(280, w - 32))
+            box = pygame.Rect(w // 2 - box_w // 2, h // 2 - 68, box_w, 136)
             pygame.draw.rect(screen, (22, 20, 30), box, border_radius=8)
             pygame.draw.rect(screen, win_col, box, width=2, border_radius=8)
 
@@ -831,16 +832,22 @@ def _run_combat_loop(
                 sub_surf, (box.centerx - sub_surf.get_width() // 2, box.y + 50)
             )
 
-            edit_btn.width, edit_btn.height = 124, 34
-            replay_btn.width, replay_btn.height = 128, 34
-            exit_btn.width, exit_btn.height = 104, 34
-            total_w = edit_btn.width + replay_btn.width + exit_btn.width + 20
+            btn_gap = 10
+            avail_end_w = max(180, box_w - 32 - btn_gap * 2)
+            edit_btn.width = max(64, int(avail_end_w * 0.34))
+            replay_btn.width = max(72, int(avail_end_w * 0.36))
+            exit_btn.width = max(56, avail_end_w - edit_btn.width - replay_btn.width)
+            edit_btn.height = 34
+            replay_btn.height = 34
+            exit_btn.height = 34
+
+            total_w = edit_btn.width + replay_btn.width + exit_btn.width + btn_gap * 2
             start_x = box.centerx - total_w // 2
             btn_y = box.y + 84
 
             edit_btn.topleft = (start_x, btn_y)
-            replay_btn.topleft = (edit_btn.right + 10, btn_y)
-            exit_btn.topleft = (replay_btn.right + 10, btn_y)
+            replay_btn.topleft = (edit_btn.right + btn_gap, btn_y)
+            exit_btn.topleft = (replay_btn.right + btn_gap, btn_y)
 
             for r_btn, txt, base_c, hov_c in (
                 (edit_btn, "Editar (E)", (58, 66, 92), (82, 94, 128)),
@@ -863,7 +870,6 @@ def _run_combat_loop(
 
 
 def run_auto_battle(seed: int | None = None) -> None:
-    """Flujo completo: Menú de inicio -> Edición de partida -> Combate."""
     pygame.init()
     pygame.display.set_caption("Arena Simulador")
 

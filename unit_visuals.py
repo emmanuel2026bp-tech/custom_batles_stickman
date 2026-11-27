@@ -11,7 +11,6 @@ def draw_python_shield(
     shield_h: int = 28,
     flash: bool = False,
 ) -> None:
-    """Dibuja un escudo grande con el emblema de dos serpientes entrelazadas de Python."""
     rect = pygame.Rect(
         cx - shield_w // 2,
         cy - shield_h // 2,
@@ -34,7 +33,6 @@ def draw_python_shield(
     iy = cy - inner_h // 2
     mid_y = iy + inner_h // 2
 
-    # Mitad superior: bloque azul de Python
     top_rect = pygame.Rect(ix, iy, inner_w, inner_h // 2)
     pygame.draw.rect(screen, py_blue, top_rect, border_radius=3)
     pygame.draw.rect(
@@ -44,7 +42,6 @@ def draw_python_shield(
         border_radius=2,
     )
 
-    # Mitad inferior: bloque amarillo de Python
     bot_rect = pygame.Rect(ix, mid_y, inner_w, inner_h - inner_h // 2)
     pygame.draw.rect(screen, py_yellow, bot_rect, border_radius=3)
     pygame.draw.rect(
@@ -54,10 +51,8 @@ def draw_python_shield(
         border_radius=2,
     )
 
-    # Franja divisoria central diagonal/escalonada característica del logo
     pygame.draw.line(screen, bg_col, (ix + 1, mid_y), (ix + inner_w - 1, mid_y), 2)
 
-    # Ojos característicos del logo de Python
     eye_blue_x = ix + max(2, inner_w // 4) + (facing * 1)
     eye_blue_y = iy + max(2, inner_h // 5)
     eye_yellow_x = ix + inner_w - max(3, inner_w // 4) + (facing * 1)
@@ -84,7 +79,6 @@ def draw_fighter_visual(
     cooldown: float,
     hit_flash: float,
 ) -> None:
-    """Dibuja una unidad con sus accesorios, armaduras, cascos/sombrero y armas."""
     sx = int(round(x - cam_x))
     sy = ground_y
     if sx < -70 or sx > screen.get_width() + 70:

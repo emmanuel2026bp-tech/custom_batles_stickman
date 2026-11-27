@@ -52,7 +52,6 @@ def normalize_kind(kind: str) -> str:
 
 
 def expand_roster(spec: object) -> list[str]:
-    """Convierte un dict o iterable de unidades en una lista plana."""
     roster: list[str] = []
     if isinstance(spec, dict):
         for raw_kind, raw_count in spec.items():
@@ -68,7 +67,6 @@ def expand_roster(spec: object) -> list[str]:
 
 
 def counts_from_roster(roster: Iterable[str]) -> dict[str, int]:
-    """Devuelve el conteo por unidad a partir de una lista plana."""
     counts = {"sword": 0, "archidon": 0, "lanzatonio": 0}
     for raw_kind in roster:
         kind = normalize_kind(str(raw_kind))
@@ -78,17 +76,14 @@ def counts_from_roster(roster: Iterable[str]) -> dict[str, int]:
 
 
 def roster_from_counts(counts: dict[str, int]) -> list[str]:
-    """Convierte un diccionario de cantidades en una lista plana de unidades."""
     return expand_roster(counts)
 
 
 def expand_counts(counts: dict[str, int]) -> list[str]:
-    """Expande un diccionario de cantidades en una lista plana de unidades."""
     return expand_roster(counts)
 
 
 def calculate_population(counts: dict[str, int]) -> int:
-    """Calcula la población total según el coste de cada tipo de unidad."""
     total = 0
     for raw_kind, raw_count in counts.items():
         kind = normalize_kind(str(raw_kind))
@@ -101,7 +96,6 @@ def generate_random_roster(
     target_pop: int = RANDOM_TARGET_POPULATION,
     rng: random.Random | None = None,
 ) -> list[str]:
-    """Genera una lista aleatoria cuya población no supera target_pop."""
     rand = rng if rng is not None else random.Random()
     remaining = max(0, int(target_pop))
     roster: list[str] = []
@@ -123,7 +117,6 @@ def generate_random_armies(
     target_pop: int = RANDOM_TARGET_POPULATION,
     rng: random.Random | None = None,
 ) -> tuple[list[str], list[str]]:
-    """Genera dos ejércitos aleatorios independientes con target_pop."""
     rand = rng if rng is not None else random.Random()
     return (
         generate_random_roster(target_pop=target_pop, rng=rand),
@@ -135,7 +128,6 @@ def get_matchup_armies(
     matchup_name: str | None = None,
     rng: random.Random | None = None,
 ) -> tuple[list[str], list[str]]:
-    """Devuelve (team_a_army, team_b_army) para el preset o ACTIVE_MATCHUP."""
     key = matchup_name if matchup_name in MATCHUPS else ACTIVE_MATCHUP
     cfg = MATCHUPS.get(key) or next(iter(MATCHUPS.values()))
     pop_cap = max(1, int(cfg.get("pop_cap", RANDOM_TARGET_POPULATION)))
@@ -149,7 +141,6 @@ def get_matchup_armies(
 
 
 def get_matchup_label(matchup_name: str) -> str:
-    """Devuelve el nombre visible para el preset indicado."""
     cfg = MATCHUPS.get(matchup_name, {})
     raw_label = cfg.get("label")
     if isinstance(raw_label, str) and raw_label.strip():

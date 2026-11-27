@@ -36,6 +36,23 @@ def _sync_bg(screen: pygame.Surface, bg: ArenaBackground) -> None:
         bg.terrain_surf = bg._build_terrain_surface()
 
 
+def _fit_text(
+    text: str,
+    max_w: int,
+    fonts: tuple[pygame.font.Font, ...],
+    color: tuple[int, int, int],
+) -> pygame.Surface:
+    for fnt in fonts:
+        surf = fnt.render(text, True, color)
+        if surf.get_width() <= max_w:
+            return surf
+    smallest = fonts[-1]
+    trimmed = text
+    while len(trimmed) > 1 and smallest.render(trimmed + "...", True, color).get_width() > max_w:
+        trimmed = trimmed[:-1]
+    return smallest.render(trimmed + "..." if len(trimmed) < len(text) else trimmed, True, color)
+
+
 def _random_counts_for_cap(pop_cap: int, rng: random.Random) -> dict[str, int]:
     counts = {k: 0 for k in UNIT_ORDER}
     used = 0
@@ -89,7 +106,6 @@ def run_start_menu(
     clock: pygame.time.Clock,
     bg: ArenaBackground,
 ) -> bool:
-    """Pantalla de inicio sobre la arena animada. Devuelve True para iniciar o False para salir."""
     font_title = pygame.font.SysFont("consolas", 40, bold=True)
     font_sub = pygame.font.SysFont("consolas", 16, bold=True)
     font_btn = pygame.font.SysFont("consolas", 18, bold=True)
@@ -200,11 +216,11 @@ def run_match_editor(
     initial_counts_a: dict[str, int] | None = None,
     initial_counts_b: dict[str, int] | None = None,
 ) -> tuple[str, list[str], list[str]] | None:
-    """Pantalla intermedia para elegir preset o armar equipos de forma personalizada."""
     font_title = pygame.font.SysFont("consolas", 26, bold=True)
     font_header = pygame.font.SysFont("consolas", 15, bold=True)
     font_item = pygame.font.SysFont("consolas", 14, bold=True)
     font_small = pygame.font.SysFont("consolas", 12, bold=True)
+    font_tiny = pygame.font.SysFont("consolas", 10, bold=True)
 
     preset_keys = [p[0] for p in GLOBAL_FIGHT_PRESETS]
     current_preset = (
@@ -249,8 +265,8 @@ def run_match_editor(
         margin_x = max(22, int(w * 0.032))
         top_y = max(36, int(h * 0.05))
         bottom_margin = max(28, int(h * 0.038))
-        panel_w = w - margin_x * 2
-        panel_h = max(480, h - top_y - bottom_margin)
+        panel_w = max(360, w - margin_x * 2)
+        panel_h = max(360, h - top_y - bottom_margin)
         panel = pygame.Rect(margin_x, top_y, panel_w, panel_h)
 
         top_bar_y = panel.y + 14
@@ -262,12 +278,12 @@ def run_match_editor(
         col_gap = 18
         col_w = (panel.w - 32 - col_gap) // 2
         col_top = top_bar_y + 42
-        col_h = max(145, min(205, int(panel.h * 0.29)))
+        col_h = max(124, min(205, int(panel.h * 0.29)))
 
         card_a = pygame.Rect(panel.x + 16, col_top, col_w, col_h)
         card_b = pygame.Rect(card_a.right + col_gap, col_top, col_w, col_h)
 
-        row_area_h = max(84, col_h - 46)
+        row_area_h = max(78, col_h - 44)
         row_step = row_area_h / len(UNIT_ORDER)
 
         a_minus_btns: dict[str, pygame.Rect] = {}
@@ -276,7 +292,7 @@ def run_match_editor(
         b_plus_btns: dict[str, pygame.Rect] = {}
 
         for idx, kind in enumerate(UNIT_ORDER):
-            ry = int(round(card_a.y + 38 + idx * row_step))
+            ry = int(round(card_a.y + 36 + idx * row_step))
             a_minus_btns[kind] = pygame.Rect(card_a.right - 74, ry, 26, 24)
             a_plus_btns[kind] = pygame.Rect(card_a.right - 40, ry, 26, 24)
             b_minus_btns[kind] = pygame.Rect(card_b.right - 74, ry, 26, 24)
@@ -291,9 +307,9 @@ def run_match_editor(
         presets_label_y = card_a.bottom + 10
         presets_grid_top = presets_label_y + 18
         presets_grid_bottom = footer_y - 12
-        avail_grid_h = max(72, presets_grid_bottom - presets_grid_top)
+        avail_grid_h = max(66, presets_grid_bottom - presets_grid_top)
 
-        p_cols = 6
+        p_cols = 6 if panel.w >= 760 else 5
         p_rows = math.ceil(len(GLOBAL_FIGHT_PRESETS) / p_cols)
         p_gap_x = 8
         p_gap_y = 6 if avail_grid_h >= p_rows * 28 else 4
@@ -435,17 +451,13 @@ def run_match_editor(
         preset_label_txt = (
             f"Preset: {get_matchup_label(current_preset)} ({pop_cap} Pob)"
         )
-        preset_lbl = font_header.render(preset_label_txt, True, (240, 242, 248))
         max_preset_w = max(80, clear_btn.left - (next_btn.right + 22))
-        if preset_lbl.get_width() > max_preset_w:
-            scale_ratio = max_preset_w / preset_lbl.get_width()
-            preset_lbl = pygame.transform.smoothscale(
-                preset_lbl,
-                (
-                    max_preset_w,
-                    max(14, int(preset_lbl.get_height() * scale_ratio)),
-                ),
-            )
+        preset_lbl = _fit_text(
+            preset_label_txt,
+            max_preset_w,
+            (font_header, font_item, font_small),
+            (240, 242, 248),
+        )
         screen.blit(
             preset_lbl,
             (
@@ -463,27 +475,40 @@ def run_match_editor(
             screen, TEAM_COLORS["B"], card_b, width=2, border_radius=8
         )
 
-        hdr_a = font_header.render(
-            f"EQUIPO A | Pob {pop_cap} ({pop_a})", True, TEAM_COLORS["A"]
+        hdr_a = _fit_text(
+            f"EQUIPO A | Pob {pop_cap} ({pop_a})",
+            max(60, card_a.w - 28),
+            (font_header, font_item, font_small),
+            TEAM_COLORS["A"],
         )
-        hdr_b = font_header.render(
-            f"EQUIPO B | Pob {pop_cap} ({pop_b})", True, TEAM_COLORS["B"]
+        hdr_b = _fit_text(
+            f"EQUIPO B | Pob {pop_cap} ({pop_b})",
+            max(60, card_b.w - 28),
+            (font_header, font_item, font_small),
+            TEAM_COLORS["B"],
         )
         screen.blit(hdr_a, (card_a.x + 14, card_a.y + 10))
         screen.blit(hdr_b, (card_b.x + 14, card_b.y + 10))
 
         for idx, kind in enumerate(UNIT_ORDER):
-            ry = int(round(card_a.y + 38 + idx * row_step))
+            ry = int(round(card_a.y + 36 + idx * row_step))
             cost = _unit_pop_cost(kind)
             label = UNIT_STATS[kind]["label"]
+            max_row_txt_w = max(50, a_minus_btns[kind].left - (card_a.x + 22))
 
-            txt_a = font_item.render(
-                f"{label} ({cost}): {counts_a[kind]}", True, (238, 240, 246)
+            txt_a = _fit_text(
+                f"{label} ({cost}): {counts_a[kind]}",
+                max_row_txt_w,
+                (font_item, font_small),
+                (238, 240, 246),
             )
             screen.blit(txt_a, (card_a.x + 14, ry + 4))
 
-            txt_b = font_item.render(
-                f"{label} ({cost}): {counts_b[kind]}", True, (238, 240, 246)
+            txt_b = _fit_text(
+                f"{label} ({cost}): {counts_b[kind]}",
+                max_row_txt_w,
+                (font_item, font_small),
+                (238, 240, 246),
             )
             screen.blit(txt_b, (card_b.x + 14, ry + 4))
 
@@ -587,13 +612,12 @@ def run_match_editor(
                 border_c = (105, 112, 134)
             pygame.draw.rect(screen, fill_c, rect_p, border_radius=5)
             pygame.draw.rect(screen, border_c, rect_p, width=1, border_radius=5)
-            p_t = font_small.render(plabel, True, (245, 246, 250))
-            if p_t.get_width() > rect_p.w - 8:
-                ratio = (rect_p.w - 8) / p_t.get_width()
-                p_t = pygame.transform.smoothscale(
-                    p_t,
-                    (rect_p.w - 8, max(11, int(p_t.get_height() * ratio))),
-                )
+            p_t = _fit_text(
+                plabel,
+                max(20, rect_p.w - 8),
+                (font_small, font_tiny),
+                (245, 246, 250),
+            )
             screen.blit(
                 p_t,
                 (

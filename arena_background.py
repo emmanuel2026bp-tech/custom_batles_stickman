@@ -5,7 +5,7 @@ import pygame
 
 try:
     from PIL import Image
-except ImportError:  # pragma: no cover
+except ImportError:
     Image = None
 
 
@@ -17,7 +17,6 @@ TERRAIN_BARRANCO = "barranco"
 COMBAT_TERRAIN_VARIANTS = (TERRAIN_MENU, TERRAIN_AMPHITHEATER, TERRAIN_BARRANCO)
 TERRAIN_VARIANTS = (TERRAIN_MENU_ARMORY, *COMBAT_TERRAIN_VARIANTS)
 
-# Paleta 8-bit - Menú: Armería medieval de madera
 C_ARMORY_CEILING = (34, 30, 38)
 C_ARMORY_WALL_DARK = (62, 42, 32)
 C_ARMORY_WALL_MID = (98, 66, 46)
@@ -36,7 +35,6 @@ C_ARMORY_SHIELD_WHT = (224, 214, 198)
 C_ARMORY_STEEL = (156, 168, 182)
 C_ARMORY_IRON = (74, 78, 86)
 
-# Paleta 8-bit - Combate / Campo verde
 C_FIELD_SKY_TOP = (74, 184, 226)
 C_FIELD_SKY_BOT = (178, 232, 240)
 C_FIELD_SUN = (255, 236, 138)
@@ -64,13 +62,11 @@ C_FIELD_HOUSE_ROOF_DARK = (148, 52, 38)
 C_FIELD_HOUSE_WIN = (126, 206, 236)
 C_FIELD_HOUSE_DOOR = (118, 76, 40)
 
-# Paleta 8-bit - Lago en campo verde
 C_FIELD_LAKE_SHORE = (198, 178, 124)
 C_FIELD_LAKE_DEEP = (46, 134, 198)
 C_FIELD_LAKE_MAIN = (78, 174, 226)
 C_FIELD_LAKE_HI = (182, 236, 252)
 
-# Paleta 8-bit - Combate 1: Coliseo romano
 C_SKY_TOP = (46, 178, 214)
 C_SKY_BOT = (158, 226, 232)
 
@@ -94,7 +90,6 @@ C_ROCK_SHADE = (74, 40, 32)
 C_OUTLINE = (24, 20, 26)
 C_BORDER = (88, 102, 126)
 
-# Paleta 8-bit - Combate 2: Barranco nocturno con luna y montañas
 C_NIGHT_SKY_TOP = (8, 34, 96)
 C_NIGHT_SKY_MID = (16, 66, 148)
 C_NIGHT_SKY_HOR = (36, 106, 184)
@@ -128,7 +123,6 @@ C_CLIFF_RIM = (84, 112, 186)
 def _pixelize_image_to_surface(
     image_path: str, target_w: int, target_h: int, pixel_scale: int = 4
 ) -> pygame.Surface | None:
-    """Convierte una imagen en una superficie 8-bit continua sin recortar ni repetir."""
     if not image_path or not os.path.isfile(image_path):
         return None
     try:
@@ -159,7 +153,6 @@ def _pixelize_image_to_surface(
 def _build_procedural_8bit_menu_armory(
     scene_w: int, scene_h: int, ground_y: int, pixel_size: int = 4
 ) -> pygame.Surface:
-    """Genera un fondo 8-bit de armería medieval de madera exclusivo para el menú."""
     pw = max(240, scene_w // pixel_size)
     ph = max(90, scene_h // pixel_size)
     p_ground = max(20, int(round(ground_y / pixel_size)))
@@ -234,7 +227,6 @@ def _build_procedural_8bit_menu_armory(
 def _draw_8bit_tree(
     low: pygame.Surface, tx: int, base_y: int, scale: float = 1.0
 ):
-    """Dibuja un árbol 8-bit con tronco y copa en capas verdes."""
     trunk_w = max(2, int(round(3 * scale)))
     trunk_h = max(4, int(round(7 * scale)))
     tr_x = tx - trunk_w // 2
@@ -268,7 +260,6 @@ def _draw_8bit_tree(
 
 
 def _draw_8bit_distant_house(low: pygame.Surface, hx: int, base_y: int):
-    """Dibuja una casita sencilla a lo lejos sobre la colina."""
     wall_w = 12
     wall_h = 7
     wx = hx - wall_w // 2
@@ -294,7 +285,6 @@ def _draw_8bit_distant_house(low: pygame.Surface, hx: int, base_y: int):
 
 
 def _draw_8bit_field_lake(low: pygame.Surface, lx: int, ly: int, rx: int, ry: int):
-    """Dibuja un lago 8-bit en el campo con orilla, agua y reflejos."""
     pygame.draw.ellipse(
         low,
         C_FIELD_LAKE_SHORE,
@@ -318,7 +308,6 @@ def _draw_8bit_field_lake(low: pygame.Surface, lx: int, ly: int, rx: int, ry: in
 def _build_procedural_8bit_green_field(
     scene_w: int, scene_h: int, ground_y: int, pixel_size: int = 4
 ) -> pygame.Surface:
-    """Genera el fondo de 'campo verde' en 8-bit con lago, árboles y casita."""
     pw = max(240, scene_w // pixel_size)
     ph = max(90, scene_h // pixel_size)
     p_ground = max(20, int(round(ground_y / pixel_size)))
@@ -418,7 +407,6 @@ def _build_procedural_8bit_green_field(
 def _build_procedural_8bit_amphitheater(
     scene_w: int, scene_h: int, ground_y: int, pixel_size: int = 4
 ) -> pygame.Surface:
-    """Genera el coliseo romano continuo en estilo 8-bit para todo el escenario."""
     pw = max(240, scene_w // pixel_size)
     ph = max(90, scene_h // pixel_size)
     p_ground = max(20, int(round(ground_y / pixel_size)))
@@ -586,7 +574,6 @@ def _build_procedural_8bit_amphitheater(
 def _build_procedural_8bit_barranco(
     scene_w: int, scene_h: int, ground_y: int, pixel_size: int = 4
 ) -> pygame.Surface:
-    """Genera el terreno 'barranco' en 8-bit con rocas en el agua y suelo libre."""
     pw = max(240, scene_w // pixel_size)
     ph = max(90, scene_h // pixel_size)
     p_ground = max(20, int(round(ground_y / pixel_size)))
@@ -760,8 +747,6 @@ def _build_procedural_8bit_barranco(
 
 
 class ArenaBackground:
-    """Fondo del terreno en estilo 8-bit continuo sin cortes ni repeticiones."""
-
     def __init__(
         self,
         width: int,
@@ -811,13 +796,12 @@ class ArenaBackground:
         return None
 
     def set_menu_terrain(self) -> str:
-        """Restaura el fondo de armería medieval en 8-bit exclusivo para el menú."""
-        self.terrain_variant = TERRAIN_MENU_ARMORY
-        self.terrain_surf = self._build_terrain_surface()
+        if self.terrain_variant != TERRAIN_MENU_ARMORY or self.terrain_surf is None:
+            self.terrain_variant = TERRAIN_MENU_ARMORY
+            self.terrain_surf = self._build_terrain_surface()
         return self.terrain_variant
 
     def randomize_terrain(self, rng: random.Random | None = None) -> str:
-        """Elige aleatoriamente entre los terrenos de combate (sin la armería del menú)."""
         picker = rng if rng is not None else random
         self.terrain_variant = picker.choice(COMBAT_TERRAIN_VARIANTS)
         self.terrain_surf = self._build_terrain_surface()

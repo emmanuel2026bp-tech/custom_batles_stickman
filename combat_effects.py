@@ -3,13 +3,13 @@ import random
 from typing import TYPE_CHECKING
 import pygame
 
+from game_config import TEAM_COLORS
+
 if TYPE_CHECKING:
     from simulador_main import Fighter
 
 
 class DamagePopup:
-    """Número flotante de daño o bloqueo con salto aleatorio y color de la unidad."""
-
     def __init__(
         self,
         x: float,
@@ -47,8 +47,6 @@ class DamagePopup:
 
 
 class BloodPuddle:
-    """Mancha o charco de sangre oscura en el suelo."""
-
     def __init__(
         self,
         x: float,
@@ -76,8 +74,6 @@ class BloodPuddle:
 
 
 class SplatterParticle:
-    """Gota líquida de sangre oscura que se estira en el aire y deja mancha al caer."""
-
     def __init__(
         self,
         x: float,
@@ -138,8 +134,6 @@ class SplatterParticle:
 
 
 class LimbPiece:
-    """Parte desarmada (cabeza, torso, extremidad, casco, armadura, escudo, accesorio o arma)."""
-
     def __init__(
         self,
         part_type: str,
@@ -345,8 +339,6 @@ class LimbPiece:
 
 
 class ArrowProjectile:
-    """Flecha disparada por Archidon que viaja en parábola y se rompe al impactar."""
-
     def __init__(
         self,
         x: float,
@@ -441,19 +433,21 @@ class ArrowProjectile:
         for enemy in enemies:
             if not enemy.alive:
                 continue
-            body_top = float(ground_y) - 48.0
-            body_bot = float(ground_y) + 2.0
+            body_top = float(enemy.ground_y) - 48.0
+            body_bot = float(enemy.ground_y) + 2.0
             if min_x <= enemy.x <= max_x and not (max_y < body_top or min_y > body_bot):
                 hit_target = enemy
                 break
 
         if hit_target is not None:
             self._spawn_break_pieces(pieces, rng)
+            team_col = TEAM_COLORS.get(hit_target.team, hit_target.color)
             if hit_target.try_block_arrow_from_kind("archidon", rng):
+                hit_target.hit_flash = 0.08
                 popups.append(
                     DamagePopup(
                         hit_target.x,
-                        float(ground_y) - 46.0,
+                        float(hit_target.ground_y) - 46.0,
                         "BLOQ",
                         (255, 255, 255),
                         vx=rng.uniform(-26.0, 26.0),
@@ -468,9 +462,9 @@ class ArrowProjectile:
             popups.append(
                 DamagePopup(
                     hit_target.x + rng.uniform(-6.0, 6.0),
-                    float(ground_y) - 44.0,
+                    float(hit_target.ground_y) - 44.0,
                     f"-{dmg_taken}",
-                    hit_target.color,
+                    team_col,
                     vx=rng.uniform(-42.0, 42.0),
                     vy=-rng.uniform(85.0, 135.0),
                 )
