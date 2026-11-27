@@ -387,6 +387,23 @@ class Fighter:
                 push += 0.2 if (self.idx % 2 == 0) else -0.2
         return max(-0.85, min(0.85, push))
 
+    def _clamp_behind_allied_lanzatonios(
+        self,
+        next_x: float,
+        allies: list["Fighter"],
+    ) -> float:
+        if self.kind != "sword":
+            return next_x
+        lanzatonios = [a for a in allies if a.alive and a.kind == "lanzatonio"]
+        if not lanzatonios:
+            return next_x
+        buffer_px = 14.0
+        if self.team == "A":
+            front_lanz_x = max(a.x for a in lanzatonios)
+            return min(next_x, front_lanz_x - buffer_px)
+        front_lanz_x = min(a.x for a in lanzatonios)
+        return max(next_x, front_lanz_x + buffer_px)
+
     def update(
         self,
         dt: float,
@@ -421,14 +438,19 @@ class Fighter:
 
         if dist > self.attack_range:
             move_vx = direction * self.speed + crowd_push * (self.speed * 0.45)
+            prev_x = self.x
             next_x = self.x + move_vx * dt
-            self.x = max(60.0, min(float(world_w - 60), next_x))
-            self.walk_phase += dt * (self.speed * 0.14)
+            next_x = max(60.0, min(float(world_w - 60), next_x))
+            self.x = self._clamp_behind_allied_lanzatonios(next_x, allies)
+            if abs(self.x - prev_x) > 0.05:
+                self.walk_phase += dt * (self.speed * 0.14)
         else:
             if self.kind != "archidon" and abs(crowd_push) > 0.08:
                 adjusted_x = self.x + crowd_push * (self.speed * 0.35) * dt
+                adjusted_x = max(60.0, min(float(world_w - 60), adjusted_x))
+                adjusted_x = self._clamp_behind_allied_lanzatonios(adjusted_x, allies)
                 if abs(target.x - adjusted_x) <= self.attack_range:
-                    self.x = max(60.0, min(float(world_w - 60), adjusted_x))
+                    self.x = adjusted_x
             if self.atk_timer <= 0.0:
                 self.atk_timer = self.cooldown
                 dmg = self.compute_damage_against(target, rng)
@@ -499,8 +521,8 @@ def _spawn_fighters(
 ) -> list[Fighter]:
     fighters: list[Fighter] = []
     center_x = world_w * 0.5
-    front_a_x = center_x - 240.0
-    front_b_x = center_x + 240.0
+    front_a_x = center_x - 360.0
+    front_b_x = center_x + 360.0
 
     per_kind_a: dict[str, int] = {}
     for orig_idx, kind in enumerate(team_a_roster):
@@ -508,12 +530,12 @@ def _spawn_fighters(
         per_kind_a[kind] = slot + 1
         rank = _FORMATION_RANK.get(kind, 1)
         depth = (
-            rank * 180.0
-            + (slot % 14) * 24.0
-            + (slot // 14) * 12.0
-            + rng.uniform(-3.0, 3.0)
+            rank * 42.0
+            + (slot % 14) * 10.0
+            + (slot // 14) * 6.0
+            + rng.uniform(-1.5, 1.5)
         )
-        x = max(80.0, min(center_x - 190.0, front_a_x - depth))
+        x = max(80.0, min(center_x - 240.0, front_a_x - depth))
         fighters.append(Fighter(kind, "A", x, ground_y, orig_idx))
 
     per_kind_b: dict[str, int] = {}
@@ -522,12 +544,12 @@ def _spawn_fighters(
         per_kind_b[kind] = slot + 1
         rank = _FORMATION_RANK.get(kind, 1)
         depth = (
-            rank * 180.0
-            + (slot % 14) * 24.0
-            + (slot // 14) * 12.0
-            + rng.uniform(-3.0, 3.0)
+            rank * 42.0
+            + (slot % 14) * 10.0
+            + (slot // 14) * 6.0
+            + rng.uniform(-1.5, 1.5)
         )
-        x = min(float(world_w - 80), max(center_x + 190.0, front_b_x + depth))
+        x = min(float(world_w - 80), max(center_x + 240.0, front_b_x + depth))
         fighters.append(Fighter(kind, "B", x, ground_y, orig_idx))
 
     return fighters

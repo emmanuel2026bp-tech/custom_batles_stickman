@@ -12,7 +12,7 @@ UNIT_POP_COST: dict[str, int] = {
 RANDOM_MATCHUP_KEY = "caos_arena"
 RANDOM_TARGET_POPULATION = 40
 
-ACTIVE_MATCHUP = "choque_100p"
+ACTIVE_MATCHUP = "patrulla_inicial"
 
 
 def _build_matchups_from_presets() -> dict[str, dict[str, object]]:

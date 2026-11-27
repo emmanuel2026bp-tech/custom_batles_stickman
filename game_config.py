@@ -1,12 +1,15 @@
+# Configuración general de la ventana y el mundo de batalla
 WIDTH = 1280
 HEIGHT = 720
 ARENA_WORLD_WIDTH = 2400
 
+# Colores distintivos por bando en la arena y en el HUD
 TEAM_COLORS: dict[str, tuple[int, int, int]] = {
-    "A": (255, 214, 54),
-    "B": (245, 64, 64),
+    "A": (255, 214, 54),  # Equipo A (Amarillo)
+    "B": (245, 64, 64),    # Equipo B (Rojo)
 }
 
+# Estadísticas base y multiplicadores de daño por tipo de unidad
 UNIT_STATS: dict[str, dict[str, object]] = {
     "sword": {
         "label": "Sword",
@@ -55,9 +58,18 @@ UNIT_STATS: dict[str, dict[str, object]] = {
     },
 }
 
+# Presets globales de enfrentamientos: (clave, etiqueta, equipo_a, equipo_b, tope_poblacion)
 GLOBAL_FIGHT_PRESETS: tuple[
     tuple[str, str, dict[str, int] | None, dict[str, int] | None, int], ...
 ] = (
+    # Preset por defecto: 1 lanzatonio, 2 archidon, 3 espaderos (A) vs 2 lanzatonios, 1 archidon, 2 espaderos (B)
+    (
+        "patrulla_inicial",
+        "Patrulla Inicial",
+        {"sword": 3, "archidon": 2, "lanzatonio": 1},
+        {"sword": 2, "archidon": 1, "lanzatonio": 2},
+        10,
+    ),
     (
         "duelo_gigantes",
         "Colosos y Tiradores",
@@ -79,6 +91,7 @@ GLOBAL_FIGHT_PRESETS: tuple[
         {"sword": 6, "archidon": 6, "lanzatonio": 6},
         36,
     ),
+    # None en ambos equipos indica generación aleatoria según el tope de población
     (
         "caos_arena",
         "Escaramuza Aleatoria",
@@ -114,6 +127,7 @@ GLOBAL_FIGHT_PRESETS: tuple[
         {"sword": 20, "archidon": 16, "lanzatonio": 16},
         100,
     ),
+    # Escenarios de prueba tipo piedra, papel o tijera (PPT)
     (
         "ppt_lanzas_vs_espadas",
         "PPT: Lanzas vs Espadas",
@@ -135,6 +149,7 @@ GLOBAL_FIGHT_PRESETS: tuple[
         {"sword": 0, "archidon": 0, "lanzatonio": 33},
         100,
     ),
+    # Batallas de gran escala
     (
         "legion_120p",
         "Legión de Hierro",

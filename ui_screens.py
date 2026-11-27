@@ -10,6 +10,7 @@ from game_config import (
 )
 from matchups import (
     ACTIVE_MATCHUP,
+    RANDOM_MATCHUP_KEY,
     UNIT_POP_COST,
     get_matchup_label,
     roster_from_counts,
@@ -68,37 +69,42 @@ def _random_counts_for_cap(pop_cap: int, rng: random.Random) -> dict[str, int]:
 
 def _resolve_preset_counts(
     preset_key: str,
+    rng: random.Random,
 ) -> tuple[dict[str, int], dict[str, int], int]:
-    for key, _, c_a, c_b, pop_cap in GLOBAL_FIGHT_PRESETS:
-        if key == preset_key:
-            base_a = {k: 0 for k in UNIT_ORDER}
-            base_b = {k: 0 for k in UNIT_ORDER}
-            if c_a:
-                for k in UNIT_ORDER:
-                    base_a[k] = max(0, int(c_a.get(k, 0)))
-            if c_b:
-                for k in UNIT_ORDER:
-                    base_b[k] = max(0, int(c_b.get(k, 0)))
-            return base_a, base_b, max(1, int(pop_cap))
+    target_preset = None
+    for preset in GLOBAL_FIGHT_PRESETS:
+        if preset[0] == preset_key:
+            target_preset = preset
+            break
 
-    default_key = ACTIVE_MATCHUP
-    for key, _, c_a, c_b, pop_cap in GLOBAL_FIGHT_PRESETS:
-        if key == default_key:
-            base_a = {k: 0 for k in UNIT_ORDER}
-            base_b = {k: 0 for k in UNIT_ORDER}
-            if c_a:
-                for k in UNIT_ORDER:
-                    base_a[k] = max(0, int(c_a.get(k, 0)))
-            if c_b:
-                for k in UNIT_ORDER:
-                    base_b[k] = max(0, int(c_b.get(k, 0)))
-            return base_a, base_b, max(1, int(pop_cap))
+    if target_preset is None:
+        for preset in GLOBAL_FIGHT_PRESETS:
+            if preset[0] == ACTIVE_MATCHUP:
+                target_preset = preset
+                break
 
-    return (
-        {k: 0 for k in UNIT_ORDER},
-        {k: 0 for k in UNIT_ORDER},
-        40,
-    )
+    if target_preset is None:
+        target_preset = GLOBAL_FIGHT_PRESETS[0]
+
+    key, _, c_a, c_b, pop_cap = target_preset
+    cap = max(1, int(pop_cap))
+
+    if key == RANDOM_MATCHUP_KEY or (c_a is None and c_b is None):
+        return (
+            _random_counts_for_cap(cap, rng),
+            _random_counts_for_cap(cap, rng),
+            cap,
+        )
+
+    base_a = {k: 0 for k in UNIT_ORDER}
+    base_b = {k: 0 for k in UNIT_ORDER}
+    if isinstance(c_a, dict):
+        for k in UNIT_ORDER:
+            base_a[k] = max(0, int(c_a.get(k, 0)))
+    if isinstance(c_b, dict):
+        for k in UNIT_ORDER:
+            base_b[k] = max(0, int(c_b.get(k, 0)))
+    return base_a, base_b, cap
 
 
 def run_start_menu(
@@ -227,22 +233,23 @@ def run_match_editor(
         initial_preset if initial_preset in preset_keys else preset_keys[0]
     )
 
-    counts_a, counts_b, pop_cap = _resolve_preset_counts(current_preset)
-    if initial_counts_a is not None:
-        counts_a = {
-            k: max(0, int(initial_counts_a.get(k, 0))) for k in UNIT_ORDER
-        }
-    if initial_counts_b is not None:
-        counts_b = {
-            k: max(0, int(initial_counts_b.get(k, 0))) for k in UNIT_ORDER
-        }
+    counts_a, counts_b, pop_cap = _resolve_preset_counts(current_preset, rng)
+    if current_preset != RANDOM_MATCHUP_KEY:
+        if initial_counts_a is not None:
+            counts_a = {
+                k: max(0, int(initial_counts_a.get(k, 0))) for k in UNIT_ORDER
+            }
+        if initial_counts_b is not None:
+            counts_b = {
+                k: max(0, int(initial_counts_b.get(k, 0))) for k in UNIT_ORDER
+            }
 
     resize_ignore_timer = 0.0
 
     def apply_preset(key: str) -> None:
         nonlocal current_preset, counts_a, counts_b, pop_cap
         current_preset = key
-        counts_a, counts_b, pop_cap = _resolve_preset_counts(key)
+        counts_a, counts_b, pop_cap = _resolve_preset_counts(key, rng)
 
     def randomize_both_teams() -> None:
         nonlocal counts_a, counts_b
