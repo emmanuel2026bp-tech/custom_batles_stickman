@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+import re
 import sys
 from typing import TYPE_CHECKING
 
@@ -57,15 +58,21 @@ _FORMATION_RANK: dict[str, int] = {
     "ninja": 3,
 }
 
+_MELEE_KINDS: set[str] = {"lanzatonio", "sword", "shadowrath", "ninja"}
+
 
 def _canonical_kind(raw_kind: object) -> str:
     text = str(raw_kind or "").strip().lower()
     norm = normalize_kind(text).strip().lower() if text else ""
     candidate = norm or text
+    if "lanza" in candidate:
+        return "lanzatonio"
     if "sword" in candidate or "espada" in candidate:
         return "sword"
     if "archi" in candidate or "arco" in candidate:
         return "archidon"
+    if "shadow" in candidate or "ninja" in candidate:
+        return "shadowrath"
     return candidate
 
 
@@ -148,6 +155,128 @@ def _build_team_fighters(
             x = max(min_x, min(max_x, front_x + offset))
         fighters.append(Fighter(kind, team, x, ground_y, orig_idx))
     return fighters
+
+
+def _spread_melee_combatants(
+    allies: list[Fighter],
+    enemies: list[Fighter],
+    world_w: int,
+    eff_dt: float,
+) -> None:
+    """Evita que las unidades cuerpo a cuerpo se amontonen en un mismo punto al pelear."""
+    if eff_dt <= 0.0:
+        return
+    alive_enemies = [e for e in enemies if e.alive]
+    if not alive_enemies:
+        return
+
+    min_x = 100.0
+    max_x = max(min_x + 40.0, float(world_w) - 100.0)
+
+    melee_allies = [
+        f
+        for f in allies
+        if f.alive and _canonical_kind(getattr(f, "kind", "")) in _MELEE_KINDS
+    ]
+    n = len(melee_allies)
+    if n < 2:
+        return
+
+    min_melee_sep = 16.0
+    step_push = min(120.0 * eff_dt, 6.0)
+
+    for i in range(n):
+        fa = melee_allies[i]
+        near_enemy_a = min(abs(e.x - fa.x) for e in alive_enemies) < 95.0
+        if not near_enemy_a:
+            continue
+        for j in range(i + 1, n):
+            fb = melee_allies[j]
+            near_enemy_b = min(abs(e.x - fb.x) for e in alive_enemies) < 95.0
+            if not near_enemy_b:
+                continue
+
+            dx = fb.x - fa.x
+            dist = abs(dx)
+            if dist < min_melee_sep:
+                if dist < 0.001:
+                    direction = -1.0 if (i + j) % 2 == 0 else 1.0
+                else:
+                    direction = 1.0 if dx > 0.0 else -1.0
+
+                push = min(step_push, (min_melee_sep - dist) * 0.5)
+                na = fa.x - direction * push
+                nb = fb.x + direction * push
+
+                if na < min_x:
+                    nb += min_x - na
+                    na = min_x
+                if nb > max_x:
+                    na -= nb - max_x
+                    nb = max_x
+
+                fa.x = max(min_x, min(max_x, na))
+                fb.x = max(min_x, min(max_x, nb))
+
+
+def _strip_critical_from_popups(
+    popups: list[DamagePopup],
+    seen_popup_ids: set[int],
+) -> None:
+    """Elimina marcas o bonificaciones de daño crítico en los popups de daño."""
+    existing_ids = {id(pop) for pop in popups}
+    seen_popup_ids.intersection_update(existing_ids)
+
+    for popup in popups:
+        pid = id(popup)
+        if pid in seen_popup_ids:
+            continue
+        seen_popup_ids.add(pid)
+
+        for flag_attr in ("is_crit", "crit", "critical", "is_critical"):
+            if hasattr(popup, flag_attr) and isinstance(getattr(popup, flag_attr), bool):
+                setattr(popup, flag_attr, False)
+
+        for text_attr in ("text", "label", "msg"):
+            if hasattr(popup, text_attr) and isinstance(getattr(popup, text_attr), str):
+                raw_txt = getattr(popup, text_attr)
+                cleaned = re.sub(r"[!¡★✦]+", "", raw_txt).strip()
+                cleaned = re.sub(
+                    r"\b(crit|crítico|critico)\b[:\s-]*",
+                    "",
+                    cleaned,
+                    flags=re.IGNORECASE,
+                ).strip()
+                if cleaned != raw_txt:
+                    setattr(popup, text_attr, cleaned or raw_txt)
+
+        if hasattr(popup, "font_size") and isinstance(getattr(popup, "font_size"), (int, float)):
+            if getattr(popup, "font_size") > 12:
+                setattr(popup, "font_size", 11)
+
+        if hasattr(popup, "color") and isinstance(getattr(popup, "color"), tuple):
+            col = getattr(popup, "color")
+            if len(col) == 3 and col[0] > 235 and col[1] < 120:
+                setattr(popup, "color", (245, 245, 245))
+
+
+def _apply_no_crit_to_fighters(
+    fighters_a: list[Fighter],
+    fighters_b: list[Fighter],
+) -> None:
+    """Anula probabilidad o multiplicador de crítico en unidades si exponen dichos atributos."""
+    for f in fighters_a + fighters_b:
+        for attr in (
+            "crit_chance",
+            "crit_prob",
+            "critical_chance",
+            "crit_rate",
+            "crit_mult",
+            "crit_multiplier",
+            "critical_multiplier",
+        ):
+            if hasattr(f, attr) and isinstance(getattr(f, attr), (int, float)):
+                setattr(f, attr, 1.0 if "mult" in attr else 0.0)
 
 
 def _halve_blood_particles(
@@ -310,10 +439,14 @@ def _compute_camera_x(
         pop_a = _team_alive_pop(alive_a)
         pop_b = _team_alive_pop(alive_b)
         if pop_a > pop_b:
-            focus_x = _closest_to_center_x(alive_a, world_w)
+            ref_x = _closest_to_center_x(alive_a, world_w)
+            other_x = _closest_to_center_x(alive_b, world_w)
+            focus_x = ref_x * 0.72 + other_x * 0.28
             active_tie_team = None
         elif pop_b > pop_a:
-            focus_x = _closest_to_center_x(alive_b, world_w)
+            ref_x = _closest_to_center_x(alive_b, world_w)
+            other_x = _closest_to_center_x(alive_a, world_w)
+            focus_x = ref_x * 0.72 + other_x * 0.28
             active_tie_team = None
         else:
             chosen_team = (
@@ -323,11 +456,16 @@ def _compute_camera_x(
             )
             active_tie_team = chosen_team
             chosen_group = alive_a if chosen_team == "A" else alive_b
-            focus_x = _closest_to_center_x(chosen_group, world_w)
+            other_group = alive_b if chosen_team == "A" else alive_a
+            ref_x = _closest_to_center_x(chosen_group, world_w)
+            other_x = _closest_to_center_x(other_group, world_w)
+            focus_x = ref_x * 0.72 + other_x * 0.28
 
+    # Amplía ligeramente el margen de encuadre para mostrar más batalla alrededor del punto de enfoque
+    effective_view_w = min(float(world_w), float(screen_w) * 1.18)
     max_cam = max(0.0, float(world_w - screen_w))
-    target_cam = max(0.0, min(max_cam, focus_x - screen_w * 0.5))
-    next_cam_x = cam_x + (target_cam - cam_x) * 0.12
+    target_cam = max(0.0, min(max_cam, focus_x - effective_view_w * 0.5))
+    next_cam_x = cam_x + (target_cam - cam_x) * 0.10
     return next_cam_x, active_tie_team
 
 
@@ -351,6 +489,7 @@ def _run_combat_loop(
 
     fighters_a = _build_team_fighters(roster_a, "A", ground_y, world_w, rng)
     fighters_b = _build_team_fighters(roster_b, "B", ground_y, world_w, rng)
+    _apply_no_crit_to_fighters(fighters_a, fighters_b)
 
     stuck_timers: dict[int, float] = {}
     last_pos: dict[int, float] = {
@@ -365,6 +504,7 @@ def _run_combat_loop(
     arrows: list[ArrowProjectile] = []
     shurikens: list[ShurikenProjectile] = []
     popups: list[DamagePopup] = []
+    seen_popup_ids: set[int] = set()
 
     cam_x = max(
         0.0,
@@ -433,6 +573,8 @@ def _run_combat_loop(
             if winner_team is None:
                 elapsed_time += eff_dt
 
+            _apply_no_crit_to_fighters(fighters_a, fighters_b)
+
             for f in fighters_a:
                 f.update(
                     eff_dt,
@@ -462,6 +604,8 @@ def _run_combat_loop(
                     shurikens=shurikens,
                 )
 
+            _spread_melee_combatants(fighters_a, fighters_b, world_w, eff_dt)
+            _spread_melee_combatants(fighters_b, fighters_a, world_w, eff_dt)
             _unstuck_edge_fighters(
                 fighters_a,
                 fighters_b,
@@ -503,6 +647,7 @@ def _run_combat_loop(
 
             particles = _halve_blood_particles(particles, seen_particle_ids, rng)
             _boost_flying_pieces(pieces, boosted_piece_ids, eff_dt, rng)
+            _strip_critical_from_popups(popups, seen_popup_ids)
 
             particles = [
                 p for p in particles if p.update(eff_dt, ground_y, stains)
