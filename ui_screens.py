@@ -1,5 +1,9 @@
+from __future__ import annotations
+
 import math
 import random
+from typing import TYPE_CHECKING
+
 import pygame
 
 from arena_background import ArenaBackground
@@ -17,7 +21,12 @@ from matchups import (
     roster_from_counts,
 )
 
-UNIT_ORDER: tuple[str, ...] = ("sword", "archidon", "lanzatonio")
+if TYPE_CHECKING:
+    from pygame.font import Font
+
+    from fighter import Fighter
+
+UNIT_ORDER: tuple[str, ...] = ("sword", "archidon", "lanzatonio", "ninja")
 
 
 def _unit_pop_cost(kind: str) -> int:
@@ -241,7 +250,7 @@ def run_match_editor(
     initial_preset: str = ACTIVE_MATCHUP,
     initial_counts_a: dict[str, int] | None = None,
     initial_counts_b: dict[str, int] | None = None,
-) -> tuple[str, list[str], list[str]] | None:
+) -> tuple[str, list[str], list[str], str] | None:
     font_title = pygame.font.SysFont("consolas", 26, bold=True)
     font_header = pygame.font.SysFont("consolas", 15, bold=True)
     font_item = pygame.font.SysFont("consolas", 14, bold=True)
@@ -254,7 +263,11 @@ def run_match_editor(
     )
 
     counts_a, counts_b, pop_cap = _resolve_preset_counts(current_preset, rng)
-    if current_preset != RANDOM_MATCHUP_KEY:
+    preset_base_a = {k: v for k, v in counts_a.items()}
+    preset_base_b = {k: v for k, v in counts_b.items()}
+    is_random_mode = current_preset == RANDOM_MATCHUP_KEY
+
+    if not is_random_mode:
         if initial_counts_a is not None:
             counts_a = {
                 k: max(0, int(initial_counts_a.get(k, 0))) for k in UNIT_ORDER
@@ -266,18 +279,38 @@ def run_match_editor(
 
     resize_ignore_timer = 0.0
 
+    def _compute_match_mode() -> str:
+        if is_random_mode:
+            return "random"
+        if counts_a != preset_base_a or counts_b != preset_base_b:
+            return "custom"
+        return "preset"
+
+    def _finish_selection() -> tuple[str, list[str], list[str], str]:
+        return (
+            current_preset,
+            roster_from_counts(counts_a),
+            roster_from_counts(counts_b),
+            _compute_match_mode(),
+        )
+
     def apply_preset(key: str) -> None:
-        nonlocal current_preset, counts_a, counts_b, pop_cap
+        nonlocal current_preset, counts_a, counts_b, pop_cap, preset_base_a, preset_base_b, is_random_mode
         current_preset = key
+        is_random_mode = key == RANDOM_MATCHUP_KEY
         counts_a, counts_b, pop_cap = _resolve_preset_counts(key, rng)
+        preset_base_a = {k: v for k, v in counts_a.items()}
+        preset_base_b = {k: v for k, v in counts_b.items()}
 
     def randomize_both_teams() -> None:
-        nonlocal counts_a, counts_b, pop_cap
+        nonlocal counts_a, counts_b, pop_cap, is_random_mode
+        is_random_mode = True
         counts_a, counts_b, pop_a, pop_b = _generate_simultaneous_random_teams(rng)
         pop_cap = max(pop_a, pop_b)
 
     def clear_both_teams() -> None:
-        nonlocal counts_a, counts_b
+        nonlocal counts_a, counts_b, is_random_mode
+        is_random_mode = False
         counts_a = {k: 0 for k in UNIT_ORDER}
         counts_b = {k: 0 for k in UNIT_ORDER}
 
@@ -305,12 +338,12 @@ def run_match_editor(
         col_gap = 18
         col_w = (panel.w - 32 - col_gap) // 2
         col_top = top_bar_y + 42
-        col_h = max(124, min(205, int(panel.h * 0.29)))
+        col_h = max(136, min(220, int(panel.h * 0.32)))
 
         card_a = pygame.Rect(panel.x + 16, col_top, col_w, col_h)
         card_b = pygame.Rect(card_a.right + col_gap, col_top, col_w, col_h)
 
-        row_area_h = max(78, col_h - 44)
+        row_area_h = max(92, col_h - 44)
         row_step = row_area_h / len(UNIT_ORDER)
 
         a_minus10_btns: dict[str, pygame.Rect] = {}
@@ -324,16 +357,16 @@ def run_match_editor(
         b_plus10_btns: dict[str, pygame.Rect] = {}
 
         for idx, kind in enumerate(UNIT_ORDER):
-            ry = int(round(card_a.y + 36 + idx * row_step))
-            a_plus10_btns[kind] = pygame.Rect(card_a.right - 44, ry, 34, 24)
-            a_plus_btns[kind] = pygame.Rect(card_a.right - 74, ry, 26, 24)
-            a_minus_btns[kind] = pygame.Rect(card_a.right - 104, ry, 26, 24)
-            a_minus10_btns[kind] = pygame.Rect(card_a.right - 142, ry, 34, 24)
+            ry = int(round(card_a.y + 34 + idx * row_step))
+            a_plus10_btns[kind] = pygame.Rect(card_a.right - 44, ry, 34, 22)
+            a_plus_btns[kind] = pygame.Rect(card_a.right - 74, ry, 26, 22)
+            a_minus_btns[kind] = pygame.Rect(card_a.right - 104, ry, 26, 22)
+            a_minus10_btns[kind] = pygame.Rect(card_a.right - 142, ry, 34, 22)
 
-            b_plus10_btns[kind] = pygame.Rect(card_b.right - 44, ry, 34, 24)
-            b_plus_btns[kind] = pygame.Rect(card_b.right - 74, ry, 26, 24)
-            b_minus_btns[kind] = pygame.Rect(card_b.right - 104, ry, 26, 24)
-            b_minus10_btns[kind] = pygame.Rect(card_b.right - 142, ry, 34, 24)
+            b_plus10_btns[kind] = pygame.Rect(card_b.right - 44, ry, 34, 22)
+            b_plus_btns[kind] = pygame.Rect(card_b.right - 74, ry, 26, 22)
+            b_minus_btns[kind] = pygame.Rect(card_b.right - 104, ry, 26, 22)
+            b_minus10_btns[kind] = pygame.Rect(card_b.right - 142, ry, 34, 22)
 
         footer_btn_h = 34
         footer_y = panel.bottom - footer_btn_h - 14
@@ -344,7 +377,7 @@ def run_match_editor(
         presets_label_y = card_a.bottom + 10
         presets_grid_top = presets_label_y + 18
         presets_grid_bottom = footer_y - 12
-        avail_grid_h = max(66, presets_grid_bottom - presets_grid_top)
+        avail_grid_h = max(56, presets_grid_bottom - presets_grid_top)
 
         p_cols = 6 if panel.w >= 760 else 5
         p_rows = math.ceil(len(GLOBAL_FIGHT_PRESETS) / p_cols)
@@ -378,11 +411,7 @@ def run_match_editor(
                 if event.key == pygame.K_ESCAPE:
                     return None
                 if event.key == pygame.K_RETURN:
-                    return (
-                        current_preset,
-                        roster_from_counts(counts_a),
-                        roster_from_counts(counts_b),
-                    )
+                    return _finish_selection()
                 if event.key == pygame.K_LEFT:
                     idx = (preset_keys.index(current_preset) - 1) % len(preset_keys)
                     apply_preset(preset_keys[idx])
@@ -449,34 +478,34 @@ def run_match_editor(
                 elif start_menu_btn.collidepoint(pos):
                     return None
                 elif play_btn.collidepoint(pos):
-                    return (
-                        current_preset,
-                        roster_from_counts(counts_a),
-                        roster_from_counts(counts_b),
-                    )
+                    return _finish_selection()
                 else:
                     handled = False
                     for kind in UNIT_ORDER:
                         if a_minus10_btns[kind].collidepoint(pos):
                             counts_a[kind] = max(0, counts_a[kind] - 10)
+                            is_random_mode = False
                             pop_a = _team_pop(counts_a)
                             units_a = _team_units_count(counts_a)
                             handled = True
                             break
                         if a_minus_btns[kind].collidepoint(pos):
                             counts_a[kind] = max(0, counts_a[kind] - 1)
+                            is_random_mode = False
                             pop_a = _team_pop(counts_a)
                             units_a = _team_units_count(counts_a)
                             handled = True
                             break
                         if a_plus_btns[kind].collidepoint(pos):
                             counts_a[kind] += 1
+                            is_random_mode = False
                             pop_a = _team_pop(counts_a)
                             units_a = _team_units_count(counts_a)
                             handled = True
                             break
                         if a_plus10_btns[kind].collidepoint(pos):
                             counts_a[kind] += 10
+                            is_random_mode = False
                             pop_a = _team_pop(counts_a)
                             units_a = _team_units_count(counts_a)
                             handled = True
@@ -484,24 +513,28 @@ def run_match_editor(
 
                         if b_minus10_btns[kind].collidepoint(pos):
                             counts_b[kind] = max(0, counts_b[kind] - 10)
+                            is_random_mode = False
                             pop_b = _team_pop(counts_b)
                             units_b = _team_units_count(counts_b)
                             handled = True
                             break
                         if b_minus_btns[kind].collidepoint(pos):
                             counts_b[kind] = max(0, counts_b[kind] - 1)
+                            is_random_mode = False
                             pop_b = _team_pop(counts_b)
                             units_b = _team_units_count(counts_b)
                             handled = True
                             break
                         if b_plus_btns[kind].collidepoint(pos):
                             counts_b[kind] += 1
+                            is_random_mode = False
                             pop_b = _team_pop(counts_b)
                             units_b = _team_units_count(counts_b)
                             handled = True
                             break
                         if b_plus10_btns[kind].collidepoint(pos):
                             counts_b[kind] += 10
+                            is_random_mode = False
                             pop_b = _team_pop(counts_b)
                             units_b = _team_units_count(counts_b)
                             handled = True
@@ -532,8 +565,14 @@ def run_match_editor(
             screen, (236, 198, 86), panel, width=2, border_radius=10
         )
 
+        mode_preview = _compute_match_mode()
+        mode_suffix = {
+            "random": "Aleatorio",
+            "custom": "Customizada",
+            "preset": "Preset",
+        }[mode_preview]
         preset_label_txt = (
-            f"Preset: {get_matchup_label(current_preset)} (Ref {pop_cap} Pob • Sin límite)"
+            f"Preset: {get_matchup_label(current_preset)} [{mode_suffix}] (Ref {pop_cap} Pob)"
         )
         max_preset_w = max(80, clear_btn.left - (next_btn.right + 22))
         preset_lbl = _fit_text(
@@ -575,7 +614,7 @@ def run_match_editor(
         screen.blit(hdr_b, (card_b.x + 14, card_b.y + 10))
 
         for idx, kind in enumerate(UNIT_ORDER):
-            ry = int(round(card_a.y + 36 + idx * row_step))
+            ry = int(round(card_a.y + 34 + idx * row_step))
             cost = _unit_pop_cost(kind)
             label = UNIT_STATS[kind]["label"]
             max_row_txt_w = max(50, a_minus10_btns[kind].left - (card_a.x + 22))
@@ -586,7 +625,7 @@ def run_match_editor(
                 (font_item, font_small),
                 (238, 240, 246),
             )
-            screen.blit(txt_a, (card_a.x + 14, ry + 4))
+            screen.blit(txt_a, (card_a.x + 14, ry + 3))
 
             txt_b = _fit_text(
                 f"{label} ({cost}): {counts_b[kind]}",
@@ -594,7 +633,7 @@ def run_match_editor(
                 (font_item, font_small),
                 (238, 240, 246),
             )
-            screen.blit(txt_b, (card_b.x + 14, ry + 4))
+            screen.blit(txt_b, (card_b.x + 14, ry + 3))
 
         p_lbl = font_small.render("Peleas:", True, (214, 218, 230))
         screen.blit(p_lbl, (panel.x + 16, presets_label_y))
@@ -680,7 +719,7 @@ def run_match_editor(
                 )
 
         for rect_p, pkey, plabel in preset_btns:
-            selected = pkey == current_preset
+            selected = pkey == current_preset and mode_preview == "preset"
             hovered = rect_p.collidepoint(mouse_pos)
             if selected:
                 fill_c = (78, 114, 168)
@@ -747,3 +786,249 @@ def run_match_editor(
         screen.blit(hint, (w // 2 - hint.get_width() // 2, panel.bottom + 8))
 
         pygame.display.flip()
+
+
+def build_hud_buttons(
+    screen_w: int,
+    *,
+    paused: bool = False,
+    sim_speed: float = 1.0,
+) -> dict[str, pygame.Rect]:
+    _ = (screen_w, paused, sim_speed)
+    btn_h = 28
+    top_y = 31
+    gap = 4
+    start_x = 10
+
+    speed_1 = pygame.Rect(start_x, top_y, 42, btn_h)
+    speed_2 = pygame.Rect(speed_1.right + gap, top_y, 42, btn_h)
+    speed_4 = pygame.Rect(speed_2.right + gap, top_y, 42, btn_h)
+    restart = pygame.Rect(speed_4.right + 8, top_y, 92, btn_h)
+
+    return {
+        "speed_1": speed_1,
+        "speed_2": speed_2,
+        "speed_4": speed_4,
+        "restart": restart,
+    }
+
+
+def _resolve_terrain_name(bg: ArenaBackground | None, matchup_label: str) -> str:
+    if bg is not None:
+        for attr in ("terrain_name", "terrain", "current_terrain", "theme", "biome"):
+            val = getattr(bg, attr, None)
+            if isinstance(val, str) and val.strip():
+                return val.strip().upper()
+    return matchup_label.strip().upper()
+
+
+def _format_mode_badge(match_mode: str) -> tuple[str, tuple[int, int, int]]:
+    if match_mode == "random":
+        return "ALEATORIA", (135, 206, 250)
+    if match_mode == "custom":
+        return "CUSTOMIZADA", (255, 195, 92)
+    return "PRESET", (162, 232, 168)
+
+
+def draw_battle_hud(
+    screen: pygame.Surface,
+    font_small: Font,
+    font_med: Font,
+    *,
+    matchup_key: str,
+    matchup_label: str,
+    fighters_a: list[Fighter],
+    fighters_b: list[Fighter],
+    elapsed_time: float,
+    sim_speed: float = 1.0,
+    paused: bool = False,
+    buttons: dict[str, pygame.Rect] | None = None,
+    bg: ArenaBackground | None = None,
+    phase_label: str | None = None,
+    match_mode: str = "preset",
+) -> dict[str, pygame.Rect]:
+    _ = (matchup_key, font_small, font_med, paused)
+    sw = screen.get_width()
+
+    mins = int(elapsed_time) // 60
+    secs = int(elapsed_time) % 60
+    time_str = f"{mins:02d}:{secs:02d}"
+
+    state_str = phase_label or ("PAUSA" if paused else "COMBATE")
+    terrain_str = _resolve_terrain_name(bg, matchup_label)
+
+    alive_a = sum(1 for f in fighters_a if f.alive)
+    alive_b = sum(1 for f in fighters_b if f.alive)
+
+    hud_text = (
+        f"{time_str} | {state_str} | {terrain_str} | "
+        f"A(Amarillo):{alive_a} vs B(Rojo):{alive_b} | "
+        "[P] Pausa [R] Reiniciar [T] Terreno [ESC] Editor"
+    )
+
+    bar_h = 26
+    pygame.draw.rect(screen, (14, 17, 22), pygame.Rect(0, 0, sw, bar_h))
+    pygame.draw.line(screen, (34, 40, 50), (0, bar_h), (sw, bar_h), 1)
+
+    hud_font = pygame.font.SysFont("consolas", 14, bold=True)
+    text_color = (242, 224, 138)
+    surf = hud_font.render(hud_text, True, text_color)
+    while surf.get_width() > sw - 16 and hud_font.get_height() > 10:
+        size = max(10, hud_font.get_height() - 3)
+        hud_font = pygame.font.SysFont("consolas", size, bold=True)
+        surf = hud_font.render(hud_text, True, text_color)
+
+    screen.blit(surf, (10, (bar_h - surf.get_height()) // 2))
+
+    btn_map = buttons or build_hud_buttons(sw, paused=paused, sim_speed=sim_speed)
+    btn_font = pygame.font.SysFont("consolas", 13, bold=True)
+    mouse_pos = pygame.mouse.get_pos()
+    speed_specs = (
+        ("speed_1", "1x", 1.0),
+        ("speed_2", "2x", 2.0),
+        ("speed_4", "4x", 4.0),
+    )
+
+    for btn_id, label_txt, target_spd in speed_specs:
+        rect = btn_map.get(btn_id)
+        if rect is None:
+            continue
+        is_active = abs(sim_speed - target_spd) < 1e-6
+        fill = (76, 108, 156) if is_active else (34, 40, 50)
+        border = (158, 202, 255) if is_active else (82, 92, 108)
+        pygame.draw.rect(screen, fill, rect, border_radius=4)
+        pygame.draw.rect(screen, border, rect, width=1, border_radius=4)
+        lbl = btn_font.render(label_txt, True, (245, 248, 252))
+        screen.blit(
+            lbl,
+            (
+                rect.centerx - lbl.get_width() // 2,
+                rect.centery - lbl.get_height() // 2,
+            ),
+        )
+
+    restart_rect = btn_map.get("restart")
+    if restart_rect is not None:
+        hovered = restart_rect.collidepoint(mouse_pos)
+        r_fill = (68, 82, 104) if hovered else (48, 56, 70)
+        r_border = (158, 184, 224) if hovered else (115, 132, 158)
+        pygame.draw.rect(screen, r_fill, restart_rect, border_radius=4)
+        pygame.draw.rect(screen, r_border, restart_rect, width=1, border_radius=4)
+        r_lbl = btn_font.render("Reiniciar", True, (245, 248, 252))
+        screen.blit(
+            r_lbl,
+            (
+                restart_rect.centerx - r_lbl.get_width() // 2,
+                restart_rect.centery - r_lbl.get_height() // 2,
+            ),
+        )
+
+    # Panel de preset / modo (Preset, Aleatoria o Customizada)
+    left_controls_end = (restart_rect.right + 12) if restart_rect is not None else 150
+    info_w = min(290, max(160, sw - left_controls_end - 12))
+    info_x = sw - info_w - 10
+    if info_x < left_controls_end:
+        info_x = left_controls_end
+        info_w = max(120, sw - info_x - 10)
+
+    info_box = pygame.Rect(info_x, 30, info_w, 46)
+    badge_txt, badge_col = _format_mode_badge(match_mode)
+    pygame.draw.rect(screen, (18, 22, 30), info_box, border_radius=5)
+    pygame.draw.rect(screen, (62, 74, 94), info_box, width=1, border_radius=5)
+
+    title_font = pygame.font.SysFont("consolas", 15, bold=True)
+    sub_font = pygame.font.SysFont("consolas", 12, bold=True)
+
+    display_title = (
+        "Partida Aleatoria"
+        if match_mode == "random" and not matchup_label.strip()
+        else matchup_label
+    )
+    title_surf = _fit_text(
+        display_title,
+        max(60, info_box.w - 16),
+        (title_font, sub_font),
+        (244, 247, 252),
+    )
+    screen.blit(title_surf, (info_box.x + 8, info_box.y + 5))
+
+    meta_line = f"{badge_txt} | {time_str} | Vel: {sim_speed:.0f}x"
+    meta_surf = _fit_text(
+        meta_line,
+        max(60, info_box.w - 16),
+        (sub_font,),
+        badge_col,
+    )
+    screen.blit(meta_surf, (info_box.x + 8, info_box.y + 25))
+
+    return btn_map
+
+
+def draw_pause_overlay(
+    screen: pygame.Surface,
+    font_med: Font,
+    font_large: Font,
+) -> None:
+    sw, sh = screen.get_size()
+    dim = pygame.Surface((sw, sh), pygame.SRCALPHA)
+    dim.fill((8, 10, 16, 155))
+    screen.blit(dim, (0, 0))
+
+    title = font_large.render("BATALLA EN PAUSA", True, (245, 248, 255))
+    hint = font_med.render(
+        "ESPACIO o ESC para continuar  |  R reiniciar  |  M menú",
+        True,
+        (195, 208, 228),
+    )
+    screen.blit(title, (sw // 2 - title.get_width() // 2, sh // 2 - 42))
+    screen.blit(hint, (sw // 2 - hint.get_width() // 2, sh // 2 + 12))
+
+
+def draw_end_overlay(
+    screen: pygame.Surface,
+    font_small: Font,
+    font_med: Font,
+    font_large: Font,
+    *,
+    winner_team: str,
+    fighters_a: list[Fighter],
+    fighters_b: list[Fighter],
+    elapsed_time: float,
+) -> None:
+    sw, sh = screen.get_size()
+    dim = pygame.Surface((sw, sh), pygame.SRCALPHA)
+    dim.fill((8, 10, 16, 168))
+    screen.blit(dim, (0, 0))
+
+    if winner_team == "A":
+        banner_txt = "¡VICTORIA DEL EQUIPO A!"
+        banner_col = TEAM_COLORS.get("A", (255, 214, 54))
+    elif winner_team == "B":
+        banner_txt = "¡VICTORIA DEL EQUIPO B!"
+        banner_col = TEAM_COLORS.get("B", (245, 64, 64))
+    else:
+        banner_txt = "¡EMPATE!"
+        banner_col = (224, 232, 244)
+
+    box = pygame.Rect(sw // 2 - 270, sh // 2 - 105, 540, 210)
+    pygame.draw.rect(screen, (22, 27, 37), box, border_radius=10)
+    pygame.draw.rect(screen, banner_col, box, width=2, border_radius=10)
+
+    title_surf = font_large.render(banner_txt, True, banner_col)
+    screen.blit(title_surf, (sw // 2 - title_surf.get_width() // 2, box.top + 22))
+
+    alive_a = sum(1 for f in fighters_a if f.alive)
+    alive_b = sum(1 for f in fighters_b if f.alive)
+    stats_surf = font_med.render(
+        f"Sobrevivientes — A: {alive_a}  |  B: {alive_b}  |  {elapsed_time:.1f}s",
+        True,
+        (225, 233, 245),
+    )
+    screen.blit(stats_surf, (sw // 2 - stats_surf.get_width() // 2, box.top + 84))
+
+    hint_surf = font_small.render(
+        "Pulsa R para revancha  |  Pulsa M o ESC para volver al menú",
+        True,
+        (170, 184, 206),
+    )
+    screen.blit(hint_surf, (sw // 2 - hint_surf.get_width() // 2, box.bottom - 38))

@@ -7,6 +7,7 @@ from combat_effects import (
     BloodPuddle,
     DamagePopup,
     LimbPiece,
+    ShurikenProjectile,
     SplatterParticle,
 )
 from game_config import TEAM_COLORS, UNIT_STATS
@@ -33,6 +34,8 @@ class Fighter:
         self.hp = self.max_hp
         self.atk = int(cfg["atk"])
         self.attack_range = float(cfg["range"])
+        self.ranged_range = float(cfg.get("ranged_range", 0.0))
+        self.shuriken_damage_mult = float(cfg.get("shuriken_damage_mult", 0.50))
         self.speed = float(cfg["speed"])
         self.cooldown = float(cfg["cooldown"])
         self.arrow_block_chance = float(cfg.get("arrow_block_chance", 0.0))
@@ -60,7 +63,10 @@ class Fighter:
         return self.hp > 0
 
     def compute_damage_against(
-        self, target: "Fighter", rng: random.Random | None = None
+        self,
+        target: "Fighter",
+        rng: random.Random | None = None,
+        damage_mult: float = 1.0,
     ) -> int:
         mult = self.vs_mult.get(target.kind, 1.0)
         leap_mult = 1.0
@@ -75,12 +81,15 @@ class Fighter:
                 self.last_attack_was_leap = True
                 self.leap_timer = self.leap_duration
 
-        if self.kind == "lanzatonio" and self.crit_chance > 0.0:
+        if self.kind in ("lanzatonio", "ninja") and self.crit_chance > 0.0:
             if roll_rng.random() < self.crit_chance:
                 crit_mult = self.crit_damage_mult
                 self.last_attack_was_crit = True
 
-        return max(1, int(round(self.atk * mult * leap_mult * crit_mult)))
+        return max(
+            1,
+            int(round(self.atk * mult * leap_mult * crit_mult * damage_mult)),
+        )
 
     def try_block_arrow_from_kind(
         self, attacker_kind: str, rng: random.Random
@@ -374,6 +383,50 @@ class Fighter:
                     wood_col,
                 )
             )
+        elif self.kind == "ninja":
+            pieces.append(
+                LimbPiece(
+                    "hat",
+                    self.x + rng.uniform(-4.0, 4.0),
+                    sy - 45.0,
+                    rng.uniform(-150.0, 150.0),
+                    rng.uniform(-245.0, -120.0),
+                    rng.uniform(-0.7, 0.7),
+                    rng.uniform(-12.0, 12.0),
+                    22.0,
+                    3,
+                    (28, 30, 38),
+                    trim_color=self.team_color,
+                )
+            )
+            pieces.append(
+                LimbPiece(
+                    "limb",
+                    self.x + rng.uniform(-5.0, 5.0),
+                    sy - 30.0,
+                    rng.uniform(-155.0, 155.0),
+                    rng.uniform(-225.0, -100.0),
+                    rng.uniform(-1.0, 1.0),
+                    rng.uniform(-13.0, 13.0),
+                    27.0,
+                    2,
+                    wood_col,
+                )
+            )
+            pieces.append(
+                LimbPiece(
+                    "limb",
+                    self.x + rng.uniform(-5.0, 5.0),
+                    sy - 27.0,
+                    rng.uniform(-160.0, 160.0),
+                    rng.uniform(-215.0, -95.0),
+                    rng.uniform(-1.0, 1.0),
+                    rng.uniform(-14.0, 14.0),
+                    21.0,
+                    2,
+                    steel_col,
+                )
+            )
 
         if len(pieces) > 900:
             del pieces[: len(pieces) - 900]
@@ -432,6 +485,7 @@ class Fighter:
         arrows: list[ArrowProjectile],
         popups: list[DamagePopup],
         rng: random.Random,
+        shurikens: list[ShurikenProjectile] | None = None,
     ) -> None:
         if not self.alive:
             if not self.death_splattered:
@@ -453,7 +507,41 @@ class Fighter:
         direction = 1.0 if target.x >= self.x else -1.0
         crowd_push = self._compute_crowd_push(allies, enemies, target)
 
-        if dist > self.attack_range:
+        can_throw_shuriken = (
+            self.kind == "ninja"
+            and shurikens is not None
+            and self.attack_range < dist <= self.ranged_range
+        )
+
+        if can_throw_shuriken:
+            # Avanza a ritmo controlado mientras hostiga a distancia con estrellas ninja
+            move_vx = direction * (self.speed * 0.65) + crowd_push * (
+                self.speed * 0.35
+            )
+            prev_x = self.x
+            next_x = max(60.0, min(float(world_w - 60), self.x + move_vx * dt))
+            self.x = self._clamp_behind_allied_lanzatonios(next_x, allies)
+            if abs(self.x - prev_x) > 0.05:
+                self.walk_phase += dt * (self.speed * 0.14)
+
+            if self.atk_timer <= 0.0:
+                self.atk_timer = self.cooldown
+                shuriken_dmg = self.compute_damage_against(
+                    target, rng, damage_mult=self.shuriken_damage_mult
+                )
+                shurikens.append(
+                    ShurikenProjectile(
+                        self.x + direction * 11.0,
+                        float(self.ground_y - 29.0),
+                        target.x,
+                        float(self.ground_y - 24.0),
+                        shuriken_dmg,
+                        self.team,
+                        is_crit=self.last_attack_was_crit,
+                        intended_target=target,
+                    )
+                )
+        elif dist > self.attack_range:
             move_vx = direction * self.speed + crowd_push * (self.speed * 0.45)
             prev_x = self.x
             next_x = self.x + move_vx * dt

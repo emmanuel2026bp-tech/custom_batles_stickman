@@ -24,6 +24,7 @@ TEAM_COLORS: dict[str, tuple[int, int, int]] = {
 }
 
 # Estadísticas base y multiplicadores de daño por tipo de unidad
+# Referencia de población: sword = 1, archidon = 2, lanzatonio = 3, ninja (Shadowrath) = 4
 UNIT_STATS: dict[str, dict[str, object]] = {
     "sword": {
         "label": "Sword",
@@ -40,6 +41,7 @@ UNIT_STATS: dict[str, dict[str, object]] = {
             "sword": 23.0 / 13,
             "archidon": 8.0 / 13.0,
             "lanzatonio": 13.0 / 13.0,
+            "ninja": 11.0 / 13.0,
         },
     },
     "archidon": {
@@ -55,6 +57,7 @@ UNIT_STATS: dict[str, dict[str, object]] = {
             "sword": 15.0 / 10.0,
             "archidon": 18.0 / 10,
             "lanzatonio": 12.0 / 10.0,
+            "ninja": 1.0,
         },
     },
     "lanzatonio": {
@@ -72,6 +75,27 @@ UNIT_STATS: dict[str, dict[str, object]] = {
             "sword": 1.0,
             "archidon": 17.0 / 15.0,
             "lanzatonio": 29.0 / 15,
+            "ninja": 13.0 / 15.0,
+        },
+    },
+    "ninja": {
+        "label": "Shadowrath",
+        "hp": 250,
+        "atk": 26,
+        "range": 46.0,
+        "ranged_range": 240.0,
+        "shuriken_damage_mult": 0.50,
+        "speed": 124.0,
+        "cooldown": 0.72,
+        "arrow_block_chance": 0.15,
+        "crit_chance": 0.20,
+        "crit_damage_mult": 1.35,
+        "color": (42, 46, 58),
+        "vs_mult": {
+            "sword": 29.0 / 26.0,
+            "archidon": 1.35,
+            "lanzatonio": 1.05,
+            "ninja": 34.0 / 26.0,
         },
     },
 }
@@ -83,43 +107,64 @@ GLOBAL_FIGHT_PRESETS: tuple[
     (
         "patrulla_inicial",
         "Patrulla Inicial",
-        {"sword": 3, "archidon": 2, "lanzatonio": 1},
-        {"sword": 0, "archidon": 2, "lanzatonio": 2},
+        {"sword": 3, "archidon": 2, "lanzatonio": 1, "ninja": 0},
+        {"sword": 0, "archidon": 2, "lanzatonio": 2, "ninja": 0},
         10,
     ),
     (
         "sword_vs_arco",
         "Sword vs Arco",
-        {"sword": 20, "archidon": 0, "lanzatonio": 0},
-        {"sword": 0, "archidon": 10, "lanzatonio": 0},
+        {"sword": 20, "archidon": 0, "lanzatonio": 0, "ninja": 0},
+        {"sword": 0, "archidon": 10, "lanzatonio": 0, "ninja": 0},
         20,
     ),
     (
         "arco_vs_lanza",
         "Arco vs Lanza",
-        {"sword": 0, "archidon": 15, "lanzatonio": 0},
-        {"sword": 0, "archidon": 0, "lanzatonio": 10},
+        {"sword": 0, "archidon": 15, "lanzatonio": 0, "ninja": 0},
+        {"sword": 0, "archidon": 0, "lanzatonio": 10, "ninja": 0},
         30,
     ),
     (
         "lanza_vs_sword",
         "Lanza vs Sword",
-        {"sword": 0, "archidon": 0, "lanzatonio": 10},
-        {"sword": 30, "archidon": 0, "lanzatonio": 0},
+        {"sword": 0, "archidon": 0, "lanzatonio": 10, "ninja": 0},
+        {"sword": 30, "archidon": 0, "lanzatonio": 0, "ninja": 0},
         30,
     ),
     (
         "spearcher",
         "Spearcher",
-        {"sword": 0, "archidon": 10, "lanzatonio": 5},
-        {"sword": 0, "archidon": 5, "lanzatonio": 8},
+        {"sword": 0, "archidon": 10, "lanzatonio": 5, "ninja": 0},
+        {"sword": 0, "archidon": 5, "lanzatonio": 8, "ninja": 0},
         35,
+    ),
+    (
+        "ninja_vs_sword",
+        "Shadowrath vs Sword",
+        {"sword": 0, "archidon": 0, "lanzatonio": 0, "ninja": 10},
+        {"sword": 40, "archidon": 0, "lanzatonio": 0, "ninja": 0},
+        40,
+    ),
+    (
+        "ninja_vs_arco",
+        "Shadowrath vs Arco",
+        {"sword": 0, "archidon": 0, "lanzatonio": 0, "ninja": 10},
+        {"sword": 0, "archidon": 20, "lanzatonio": 0, "ninja": 0},
+        40,
+    ),
+    (
+        "ninja_vs_lanza",
+        "Shadowrath vs Lanza",
+        {"sword": 0, "archidon": 0, "lanzatonio": 0, "ninja": 10},
+        {"sword": 1, "archidon": 0, "lanzatonio": 13, "ninja": 0},
+        40,
     ),
     (
         "apocalipsis_210p",
         "Cataclismo Total",
-        {"sword": 36, "archidon": 33, "lanzatonio": 36},
-        {"sword": 42, "archidon": 30, "lanzatonio": 36},
+        {"sword": 36, "archidon": 33, "lanzatonio": 36, "ninja": 0},
+        {"sword": 42, "archidon": 30, "lanzatonio": 36, "ninja": 0},
         210,
     ),
 )

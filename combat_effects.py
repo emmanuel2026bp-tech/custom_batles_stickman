@@ -1,85 +1,13 @@
 import math
 import random
 from typing import TYPE_CHECKING
+
 import pygame
 
 from game_config import TEAM_COLORS
 
 if TYPE_CHECKING:
-    from simulador_main import Fighter
-
-
-class DamagePopup:
-    def __init__(
-        self,
-        x: float,
-        y: float,
-        text: str,
-        color: tuple[int, int, int],
-        vx: float = 0.0,
-        vy: float = -78.0,
-        is_crit: bool = False,
-    ):
-        self.x = x
-        self.y = y
-        self.vx = vx
-        self.vy = vy
-        self.text = text
-        self.color = color
-        self.is_crit = is_crit
-        self.life = 0.72
-        self.max_life = 0.72
-
-    def update(self, dt: float) -> bool:
-        self.life -= dt
-        self.vy += 155.0 * dt
-        self.x += self.vx * dt
-        self.y += self.vy * dt
-        return self.life > 0.0
-
-    def draw(
-        self,
-        screen: pygame.Surface,
-        cam_x: float,
-        font: pygame.font.Font,
-        crit_font: pygame.font.Font | None = None,
-    ) -> None:
-        sx = int(round(self.x - cam_x))
-        sy = int(round(self.y))
-        if sx < -60 or sx > screen.get_width() + 60:
-            return
-        active_font = crit_font if (self.is_crit and crit_font is not None) else font
-        surf = active_font.render(self.text, True, self.color)
-        shadow = active_font.render(self.text, True, (16, 16, 20))
-        screen.blit(shadow, (sx - surf.get_width() // 2 + 1, sy + 1))
-        screen.blit(surf, (sx - surf.get_width() // 2, sy))
-
-
-class BloodPuddle:
-    def __init__(
-        self,
-        x: float,
-        y: int,
-        rx: int,
-        ry: int,
-        color: tuple[int, int, int],
-    ):
-        self.x = x
-        self.y = y
-        self.rx = rx
-        self.ry = ry
-        self.color = color
-
-    def draw(self, screen: pygame.Surface, cam_x: float) -> None:
-        sx = int(round(self.x - cam_x))
-        if -50 <= sx <= screen.get_width() + 50:
-            rect = pygame.Rect(
-                sx - self.rx,
-                self.y - self.ry // 2,
-                self.rx * 2,
-                max(2, self.ry),
-            )
-            pygame.draw.ellipse(screen, self.color, rect)
+    from fighter import Fighter
 
 
 class SplatterParticle:
@@ -98,54 +26,84 @@ class SplatterParticle:
         self.vy = vy
         self.radius = radius
         self.color = color
-        self.life = 1.6
+        self.age = 0.0
+        self.max_age = random.uniform(0.45, 0.85)
+        self.active = True
 
     def update(
         self,
         dt: float,
         ground_y: int,
-        stains: list[BloodPuddle],
+        stains: list["BloodPuddle"] | None = None,
     ) -> bool:
-        self.life -= dt
-        if self.life <= 0.0:
+        if not self.active:
             return False
-        self.vy += 510.0 * dt
+        self.age += dt
+        if self.age >= self.max_age:
+            self.active = False
+            return False
+        self.vy += 680.0 * dt
         self.x += self.vx * dt
         self.y += self.vy * dt
         if self.y >= ground_y:
-            rx = max(4, int(round(self.radius * 2.2 + abs(self.vx) * 0.018)))
-            ry = max(2, int(round(self.radius * 0.85)))
-            stains.append(BloodPuddle(self.x, ground_y + 2, rx, ry, self.color))
-            if len(stains) > 1600:
-                del stains[: len(stains) - 1600]
-            return False
+            self.y = float(ground_y)
+            if stains is not None and random.random() < 0.35:
+                stains.append(
+                    BloodPuddle(
+                        self.x,
+                        ground_y + random.randint(1, 4),
+                        max(4, self.radius + 2),
+                        2,
+                        self.color,
+                    )
+                )
+                if len(stains) > 1600:
+                    del stains[: len(stains) - 1600]
+            self.vx *= 0.45
+            self.vy = -abs(self.vy) * 0.25
+            if abs(self.vy) < 25.0:
+                self.active = False
+                return False
         return True
+
+    def draw(self, screen: pygame.Surface, cam_x: float) -> None:
+        if not self.active:
+            return
+        sx = int(round(self.x - cam_x))
+        sy = int(round(self.y))
+        if sx < -20 or sx > screen.get_width() + 20:
+            return
+        pygame.draw.circle(screen, self.color, (sx, sy), self.radius)
+
+
+class BloodPuddle:
+    def __init__(
+        self,
+        x: float,
+        y: float,
+        rx: int,
+        ry: int,
+        color: tuple[int, int, int],
+    ):
+        self.x = x
+        self.y = y
+        self.rx = rx
+        self.ry = ry
+        self.color = color
 
     def draw(self, screen: pygame.Surface, cam_x: float) -> None:
         sx = int(round(self.x - cam_x))
         sy = int(round(self.y))
-        if -35 <= sx <= screen.get_width() + 35:
-            speed = math.hypot(self.vx, self.vy)
-            if speed > 12.0:
-                streak_len = min(17.0, max(5.0, speed * 0.042))
-                ux = self.vx / speed
-                uy = self.vy / speed
-                tx = int(round(sx - ux * streak_len))
-                ty = int(round(sy - uy * streak_len))
-                pygame.draw.line(
-                    screen,
-                    self.color,
-                    (tx, ty),
-                    (sx, sy),
-                    max(2, self.radius),
-                )
-            pygame.draw.circle(screen, self.color, (sx, sy), max(2, self.radius))
+        if sx + self.rx < -20 or sx - self.rx > screen.get_width() + 20:
+            return
+        rect = pygame.Rect(sx - self.rx, sy - self.ry, self.rx * 2, self.ry * 2)
+        pygame.draw.ellipse(screen, self.color, rect)
 
 
 class LimbPiece:
     def __init__(
         self,
-        part_type: str,
+        kind: str,
         x: float,
         y: float,
         vx: float,
@@ -153,12 +111,11 @@ class LimbPiece:
         angle: float,
         ang_vel: float,
         length: float,
-        width: int,
+        thickness: int,
         color: tuple[int, int, int],
-        life: float = 5.0,
-        trim_color: tuple[int, int, int] | None = None,
+        trim_color: tuple[int, int, int] = (112, 128, 152),
     ):
-        self.part_type = part_type
+        self.kind = kind
         self.x = x
         self.y = y
         self.vx = vx
@@ -166,185 +123,167 @@ class LimbPiece:
         self.angle = angle
         self.ang_vel = ang_vel
         self.length = length
-        self.width = width
+        self.thickness = thickness
         self.color = color
-        self.trim_color = trim_color if trim_color is not None else color
-        self.life = life
-        self.max_life = life
-        self.grounded = False
+        self.trim_color = trim_color
+        self.settled = False
+        self.age = 0.0
 
-    def update(self, dt: float, ground_y: int, world_w: int) -> bool:
-        self.life -= dt
-        if self.life <= 0.0:
-            return False
+    def update(
+        self,
+        dt: float,
+        ground_y: int,
+        world_w: int | None = None,
+    ) -> bool:
+        self.age += dt
+        if self.settled:
+            return True
+        self.vy += 640.0 * dt
+        self.x += self.vx * dt
+        self.y += self.vy * dt
+        self.angle += self.ang_vel * dt
 
-        if self.part_type == "head":
-            margin_y = 4.0
-        elif self.part_type in ("armor", "quiver", "shield"):
-            margin_y = 4.0
-        else:
-            margin_y = 2.0
+        if world_w is not None:
+            min_x = 60.0
+            max_x = float(world_w - 60)
+            if self.x < min_x:
+                self.x = min_x
+                self.vx = abs(self.vx) * 0.45
+            elif self.x > max_x:
+                self.x = max_x
+                self.vx = -abs(self.vx) * 0.45
 
-        floor_y = float(ground_y) - margin_y
-
-        if not self.grounded:
-            self.vy += 520.0 * dt
-            self.x += self.vx * dt
-            self.y += self.vy * dt
-            self.angle += self.ang_vel * dt
-
-            if self.x < 40.0:
-                self.x = 40.0
-                self.vx = abs(self.vx) * 0.5
-            elif self.x > float(world_w - 40):
-                self.x = float(world_w - 40)
-                self.vx = -abs(self.vx) * 0.5
-
-            if self.y >= floor_y:
-                self.y = floor_y
-                if abs(self.vy) > 95.0:
-                    self.vy = -self.vy * 0.34
-                    self.vx *= 0.65
-                    self.ang_vel *= 0.6
-                else:
-                    self.vy = 0.0
-                    self.vx = 0.0
-                    self.ang_vel = 0.0
-                    self.grounded = True
-        else:
-            if self.part_type in ("armor", "quiver", "shield"):
-                target_ang = 0.0
+        if self.y >= ground_y:
+            self.y = float(ground_y)
+            self.vx *= 0.42
+            self.ang_vel *= 0.45
+            if abs(self.vy) > 85.0:
+                self.vy = -abs(self.vy) * 0.28
             else:
-                target_ang = 0.0 if math.cos(self.angle) >= 0.0 else math.pi
-            diff = ((target_ang - self.angle + math.pi) % (2.0 * math.pi)) - math.pi
-            self.angle += diff * min(1.0, dt * 8.0)
-
+                self.vy = 0.0
+                self.vx = 0.0
+                self.ang_vel = 0.0
+                self.settled = True
         return True
-
-    def _fade_color(
-        self, col: tuple[int, int, int], fade_ratio: float
-    ) -> tuple[int, int, int]:
-        if self.life > 1.2:
-            return col
-        return tuple(max(18, int(c * fade_ratio)) for c in col)
 
     def draw(self, screen: pygame.Surface, cam_x: float) -> None:
         sx = int(round(self.x - cam_x))
         sy = int(round(self.y))
-        if sx < -80 or sx > screen.get_width() + 80:
+        if sx < -40 or sx > screen.get_width() + 40:
             return
 
-        fade_ratio = max(0.0, min(1.0, self.life / min(1.2, self.max_life)))
-        col = self._fade_color(self.color, fade_ratio)
-        trim = self._fade_color(self.trim_color, fade_ratio)
-
-        if self.part_type == "head":
-            pygame.draw.circle(screen, col, (sx, sy), max(3, int(self.length)))
+        if self.kind == "head":
+            rad = max(3, int(round(self.length)))
+            pygame.draw.circle(screen, self.color, (sx, sy - rad), rad)
             return
 
-        if self.part_type == "shield":
-            from unit_visuals import draw_python_shield
-
-            draw_python_shield(
-                screen,
-                sx,
-                sy,
-                facing=1 if math.cos(self.angle) >= 0.0 else -1,
-                shield_w=max(14, int(self.length)),
-                shield_h=max(24, self.width * 2),
-                flash=(self.life <= 1.2 and fade_ratio < 0.45),
-            )
-            return
-
-        if self.part_type == "helmet":
-            w_box = max(10, int(self.length))
-            h_box = max(6, self.width * 2)
+        if self.kind == "helmet":
+            rad = max(5, int(round(self.length * 0.5)))
             pygame.draw.arc(
                 screen,
-                col,
-                (sx - w_box // 2, sy - h_box // 2, w_box, h_box),
+                self.color,
+                (sx - rad, sy - rad - 2, rad * 2, rad + 3),
                 0.0,
                 math.pi,
-                3,
+                max(2, self.thickness),
             )
             pygame.draw.line(
-                screen,
-                trim,
-                (sx - w_box // 2, sy),
-                (sx + w_box // 2, sy),
-                2,
+                screen, self.trim_color, (sx - rad, sy - 1), (sx + rad, sy - 1), 2
             )
             return
 
-        if self.part_type == "hat":
-            w_hat = max(14, int(self.length))
-            pygame.draw.line(screen, col, (sx - w_hat // 2, sy), (sx + w_hat // 2, sy), 2)
+        if self.kind == "hat":
+            half_w = max(8, int(round(self.length * 0.55)))
+            h = max(6, int(round(self.thickness * 2.2)))
+            pygame.draw.line(
+                screen, self.color, (sx - half_w, sy - 2), (sx + half_w, sy - 2), 2
+            )
             pygame.draw.polygon(
                 screen,
-                col,
+                self.color,
                 [
-                    (sx - w_hat // 3, sy),
-                    (sx, sy - max(6, self.width * 2)),
-                    (sx + w_hat // 3, sy),
+                    (sx - half_w + 4, sy - 2),
+                    (sx, sy - 2 - h),
+                    (sx + half_w - 4, sy - 2),
                 ],
             )
             pygame.draw.line(
                 screen,
-                trim,
-                (sx - w_hat // 3, sy - 1),
-                (sx + w_hat // 3, sy - 1),
+                self.trim_color,
+                (sx - half_w + 5, sy - 3),
+                (sx + half_w - 5, sy - 3),
                 2,
             )
             return
 
-        if self.part_type in ("armor", "quiver"):
-            w_rect = max(8, int(self.length))
-            h_rect = max(6, self.width * 2)
-            rect = pygame.Rect(sx - w_rect // 2, sy - h_rect // 2, w_rect, h_rect)
-            pygame.draw.rect(screen, col, rect, border_radius=2)
-            pygame.draw.rect(screen, trim, rect, width=1, border_radius=2)
-            if self.part_type == "armor":
-                pygame.draw.line(
-                    screen,
-                    trim,
-                    (rect.x + 2, rect.centery),
-                    (rect.right - 2, rect.centery),
-                    1,
-                )
-            elif self.part_type == "quiver":
-                pygame.draw.line(
-                    screen,
-                    trim,
-                    (rect.centerx - 2, rect.top),
-                    (rect.centerx - 3, rect.top - 5),
-                    2,
-                )
-                pygame.draw.line(
-                    screen,
-                    trim,
-                    (rect.centerx + 2, rect.top),
-                    (rect.centerx + 2, rect.top - 5),
-                    2,
-                )
+        if self.kind == "armor":
+            w = max(8, int(round(self.length)))
+            h = max(7, int(round(self.thickness * 1.8)))
+            rect = pygame.Rect(sx - w // 2, sy - h, w, h)
+            pygame.draw.rect(screen, self.color, rect, border_radius=2)
+            pygame.draw.rect(
+                screen, self.trim_color, rect, width=1, border_radius=2
+            )
             return
 
-        half_l = self.length * 0.5
-        dx = math.cos(self.angle) * half_l
-        dy = math.sin(self.angle) * half_l
-        p1 = (int(round(sx - dx)), int(round(sy - dy)))
-        p2 = (int(round(sx + dx)), int(round(sy + dy)))
-        pygame.draw.line(screen, col, p1, p2, self.width)
+        if self.kind == "shield":
+            w = max(10, int(round(self.length)))
+            h = max(14, int(round(self.thickness * 1.6)))
+            rect = pygame.Rect(sx - w // 2, sy - h, w, h)
+            pygame.draw.rect(screen, (28, 32, 42), rect, border_radius=4)
+            pygame.draw.rect(
+                screen, self.trim_color, rect, width=2, border_radius=4
+            )
+            pygame.draw.rect(
+                screen,
+                (55, 118, 171),
+                (sx - w // 2 + 2, sy - h + 2, w - 4, h // 2 - 1),
+            )
+            pygame.draw.rect(
+                screen,
+                (255, 212, 59),
+                (sx - w // 2 + 2, sy - h // 2, w - 4, h // 2 - 2),
+            )
+            return
 
-        if self.part_type == "spear_tip":
+        if self.kind == "quiver":
+            w = max(5, int(round(self.length)))
+            h = max(10, int(round(self.thickness * 2.0)))
+            rect = pygame.Rect(sx - w // 2, sy - h, w, h)
+            pygame.draw.rect(screen, self.color, rect, border_radius=2)
+            pygame.draw.line(
+                screen, self.trim_color, (sx, sy - h), (sx, sy - h - 6), 2
+            )
+            return
+
+        half = self.length * 0.5
+        x1 = sx - math.cos(self.angle) * half
+        y1 = sy - math.sin(self.angle) * half
+        x2 = sx + math.cos(self.angle) * half
+        y2 = sy + math.sin(self.angle) * half
+        pygame.draw.line(
+            screen,
+            self.color,
+            (int(round(x1)), int(round(y1))),
+            (int(round(x2)), int(round(y2))),
+            max(2, self.thickness),
+        )
+        if self.kind == "spear_tip":
+            tip_x = int(round(x2))
+            tip_y = int(round(y2))
             perp_x = -math.sin(self.angle) * 4.0
             perp_y = math.cos(self.angle) * 4.0
-            tip = (
-                int(round(p2[0] + math.cos(self.angle) * 6.0)),
-                int(round(p2[1] + math.sin(self.angle) * 6.0)),
+            head_x = int(round(x2 + math.cos(self.angle) * 7.0))
+            head_y = int(round(y2 + math.sin(self.angle) * 7.0))
+            pygame.draw.polygon(
+                screen,
+                (222, 230, 242),
+                [
+                    (tip_x + int(round(perp_x)), tip_y + int(round(perp_y))),
+                    (head_x, head_y),
+                    (tip_x - int(round(perp_x)), tip_y - int(round(perp_y))),
+                ],
             )
-            b1 = (int(round(p2[0] + perp_x)), int(round(p2[1] + perp_y)))
-            b2 = (int(round(p2[0] - perp_x)), int(round(p2[1] - perp_y)))
-            pygame.draw.polygon(screen, col, [b1, tip, b2])
 
 
 class ArrowProjectile:
@@ -356,149 +295,265 @@ class ArrowProjectile:
         target_y: float,
         damage: int,
         team: str,
-        target_ref: "Fighter",
+        intended_target: "Fighter | None" = None,
     ):
         self.x = x
         self.y = y
         self.damage = damage
         self.team = team
-        self.target_ref = target_ref
-        flight_time = max(0.18, min(0.75, abs(target_x - x) / 560.0))
-        self.vx = (target_x - x) / flight_time
-        self.vy = (target_y - y) / flight_time - 0.5 * 360.0 * flight_time
-        self.life = flight_time + 0.12
+        self.intended_target = intended_target
+        self.active = True
 
-    def _spawn_break_pieces(
-        self,
-        pieces: list[LimbPiece],
-        rng: random.Random,
-    ) -> None:
-        wood_col = (156, 102, 48)
-        tip_col = (226, 234, 245)
-        base_ang = math.atan2(self.vy, self.vx)
-
-        for _ in range(2):
-            ang = base_ang + rng.uniform(-0.85, 0.85)
-            spd = rng.uniform(55.0, 145.0)
-            pieces.append(
-                LimbPiece(
-                    "limb",
-                    self.x + rng.uniform(-3.0, 3.0),
-                    self.y + rng.uniform(-3.0, 3.0),
-                    math.cos(ang) * spd,
-                    math.sin(ang) * spd - 70.0,
-                    ang,
-                    rng.uniform(-12.0, 12.0),
-                    8.0,
-                    2,
-                    wood_col,
-                    life=2.2,
-                )
-            )
-
-        pieces.append(
-            LimbPiece(
-                "spear_tip",
-                self.x,
-                self.y,
-                self.vx * 0.25 + rng.uniform(-60.0, 60.0),
-                -rng.uniform(70.0, 140.0),
-                base_ang + rng.uniform(-0.4, 0.4),
-                rng.uniform(-10.0, 10.0),
-                7.0,
-                2,
-                tip_col,
-                life=2.2,
-            )
-        )
-        if len(pieces) > 900:
-            del pieces[: len(pieces) - 900]
+        dx = target_x - x
+        dy = target_y - y
+        flight_time = max(0.22, min(0.85, abs(dx) / 560.0))
+        gravity = 520.0
+        self.vx = dx / flight_time
+        self.vy = (dy - 0.5 * gravity * flight_time * flight_time) / flight_time
+        self.gravity = gravity
 
     def update(
         self,
         dt: float,
-        ground_y: int,
         enemies: list["Fighter"],
         particles: list[SplatterParticle],
         stains: list[BloodPuddle],
         pieces: list[LimbPiece],
-        popups: list[DamagePopup],
+        popups: list["DamagePopup"],
         rng: random.Random,
-    ) -> bool:
-        self.life -= dt
-        prev_x = self.x
-        prev_y = self.y
-
-        self.vy += 360.0 * dt
+        ground_y: int,
+    ) -> None:
+        if not self.active:
+            return
+        self.vy += self.gravity * dt
         self.x += self.vx * dt
         self.y += self.vy * dt
 
-        min_x = min(prev_x, self.x) - 10.0
-        max_x = max(prev_x, self.x) + 10.0
-        min_y = min(prev_y, self.y) - 6.0
-        max_y = max(prev_y, self.y) + 6.0
+        if self.y >= ground_y + 2:
+            self.active = False
+            return
 
-        hit_target: "Fighter | None" = None
         for enemy in enemies:
             if not enemy.alive:
                 continue
-            body_top = float(enemy.ground_y) - 48.0
-            body_bot = float(enemy.ground_y) + 2.0
-            if min_x <= enemy.x <= max_x and not (max_y < body_top or min_y > body_bot):
-                hit_target = enemy
-                break
+            if abs(enemy.x - self.x) <= 14.0 and (enemy.ground_y - 46) <= self.y <= (
+                enemy.ground_y + 4
+            ):
+                if enemy.try_block_arrow_from_kind("archidon", rng):
+                    self.active = False
+                    enemy.hit_flash = 0.08
+                    popups.append(
+                        DamagePopup(
+                            enemy.x + rng.uniform(-5.0, 5.0),
+                            float(enemy.ground_y - 46.0),
+                            "BLOQUEO!",
+                            (165, 210, 255),
+                            vx=rng.uniform(-24.0, 24.0),
+                            vy=-rng.uniform(75.0, 105.0),
+                        )
+                    )
+                    return
 
-        if hit_target is not None:
-            self._spawn_break_pieces(pieces, rng)
-            team_col = TEAM_COLORS.get(hit_target.team, hit_target.color)
-            if hit_target.try_block_arrow_from_kind("archidon", rng):
-                hit_target.hit_flash = 0.08
+                dmg_taken = min(enemy.hp, self.damage)
+                enemy.hp = max(0, enemy.hp - self.damage)
+                enemy.hit_flash = 0.14
                 popups.append(
                     DamagePopup(
-                        hit_target.x,
-                        float(hit_target.ground_y) - 46.0,
-                        "BLOQ",
-                        (255, 255, 255),
-                        vx=rng.uniform(-26.0, 26.0),
-                        vy=-rng.uniform(75.0, 110.0),
+                        enemy.x + rng.uniform(-6.0, 6.0),
+                        float(enemy.ground_y - 44.0),
+                        f"-{dmg_taken}",
+                        enemy.team_color,
+                        vx=rng.uniform(-36.0, 36.0),
+                        vy=-rng.uniform(80.0, 125.0),
                     )
                 )
-                return False
-
-            dmg_taken = min(hit_target.hp, self.damage)
-            hit_target.hp = max(0, hit_target.hp - self.damage)
-            hit_target.hit_flash = 0.14
-            popups.append(
-                DamagePopup(
-                    hit_target.x + rng.uniform(-6.0, 6.0),
-                    float(hit_target.ground_y) - 44.0,
-                    f"-{dmg_taken}",
-                    team_col,
-                    vx=rng.uniform(-42.0, 42.0),
-                    vy=-rng.uniform(85.0, 135.0),
-                )
-            )
-            died = not hit_target.alive
-            hit_target.spawn_splatter(particles, stains, rng, heavy=died)
-            if died and not hit_target.death_splattered:
-                hit_target.death_splattered = True
-                hit_target.spawn_dismantle_pieces(pieces, rng)
-            return False
-
-        if self.y >= ground_y:
-            self.y = float(ground_y)
-            self._spawn_break_pieces(pieces, rng)
-            return False
-
-        return self.life > 0.0
+                died = not enemy.alive
+                enemy.spawn_splatter(particles, stains, rng, heavy=died)
+                if died and not enemy.death_splattered:
+                    enemy.death_splattered = True
+                    enemy.spawn_dismantle_pieces(pieces, rng)
+                self.active = False
+                return
 
     def draw(self, screen: pygame.Surface, cam_x: float) -> None:
+        if not self.active:
+            return
         sx = int(round(self.x - cam_x))
         sy = int(round(self.y))
-        if sx < -40 or sx > screen.get_width() + 40:
+        if sx < -30 or sx > screen.get_width() + 30:
             return
         ang = math.atan2(self.vy, self.vx)
-        tail_x = int(round(sx - math.cos(ang) * 14))
-        tail_y = int(round(sy - math.sin(ang) * 14))
-        pygame.draw.line(screen, (238, 242, 248), (tail_x, tail_y), (sx, sy), 2)
-        pygame.draw.circle(screen, (255, 255, 255), (sx, sy), 2)
+        tail_x = int(round(sx - math.cos(ang) * 14.0))
+        tail_y = int(round(sy - math.sin(ang) * 14.0))
+        pygame.draw.line(screen, (150, 96, 46), (tail_x, tail_y), (sx, sy), 2)
+        pygame.draw.circle(screen, (224, 232, 244), (sx, sy), 2)
+
+
+class ShurikenProjectile:
+    def __init__(
+        self,
+        x: float,
+        y: float,
+        target_x: float,
+        target_y: float,
+        damage: int,
+        team: str,
+        is_crit: bool = False,
+        intended_target: "Fighter | None" = None,
+    ):
+        self.x = x
+        self.y = y
+        self.damage = damage
+        self.team = team
+        self.is_crit = is_crit
+        self.intended_target = intended_target
+        self.active = True
+        self.spin = 0.0
+
+        dx = target_x - x
+        dy = target_y - y
+        dist = max(1.0, math.hypot(dx, dy))
+        speed = 460.0
+        self.vx = (dx / dist) * speed
+        self.vy = (dy / dist) * speed
+        self.max_travel = min(290.0, dist + 45.0)
+        self.traveled = 0.0
+
+    def update(
+        self,
+        dt: float,
+        enemies: list["Fighter"],
+        particles: list[SplatterParticle],
+        stains: list[BloodPuddle],
+        pieces: list[LimbPiece],
+        popups: list["DamagePopup"],
+        rng: random.Random,
+        ground_y: int,
+    ) -> None:
+        if not self.active:
+            return
+        step_x = self.vx * dt
+        step_y = self.vy * dt
+        self.x += step_x
+        self.y += step_y
+        self.traveled += math.hypot(step_x, step_y)
+        self.spin += 26.0 * dt
+
+        if self.traveled >= self.max_travel or self.y >= ground_y + 4:
+            self.active = False
+            return
+
+        for enemy in enemies:
+            if not enemy.alive:
+                continue
+            if abs(enemy.x - self.x) <= 15.0 and (enemy.ground_y - 46) <= self.y <= (
+                enemy.ground_y + 4
+            ):
+                dmg_taken = min(enemy.hp, self.damage)
+                enemy.hp = max(0, enemy.hp - self.damage)
+                enemy.hit_flash = 0.14
+                popup_col = (255, 132, 20) if self.is_crit else enemy.team_color
+                popups.append(
+                    DamagePopup(
+                        enemy.x + rng.uniform(-6.0, 6.0),
+                        float(enemy.ground_y - 44.0),
+                        f"-{dmg_taken}",
+                        popup_col,
+                        vx=rng.uniform(-36.0, 36.0),
+                        vy=-rng.uniform(80.0, 125.0),
+                        is_crit=self.is_crit,
+                    )
+                )
+                died = not enemy.alive
+                enemy.spawn_splatter(particles, stains, rng, heavy=died)
+                if died and not enemy.death_splattered:
+                    enemy.death_splattered = True
+                    enemy.spawn_dismantle_pieces(pieces, rng)
+                self.active = False
+                return
+
+    def draw(self, screen: pygame.Surface, cam_x: float) -> None:
+        if not self.active:
+            return
+        sx = int(round(self.x - cam_x))
+        sy = int(round(self.y))
+        if sx < -30 or sx > screen.get_width() + 30:
+            return
+
+        blade_col = (255, 165, 64) if self.is_crit else (228, 236, 248)
+        outline_col = (12, 14, 20)
+        arm_len = 6.0
+        for idx in range(4):
+            ang = self.spin + idx * (math.pi * 0.5)
+            perp = ang + math.pi * 0.5
+            tip_x = sx + math.cos(ang) * arm_len
+            tip_y = sy + math.sin(ang) * arm_len
+            side1_x = sx + math.cos(perp) * 2.0
+            side1_y = sy + math.sin(perp) * 2.0
+            side2_x = sx - math.cos(perp) * 2.0
+            side2_y = sy - math.sin(perp) * 2.0
+            pts = [
+                (sx, sy),
+                (int(round(side1_x)), int(round(side1_y))),
+                (int(round(tip_x)), int(round(tip_y))),
+                (int(round(side2_x)), int(round(side2_y))),
+            ]
+            pygame.draw.polygon(screen, outline_col, pts)
+            pygame.draw.polygon(screen, blade_col, pts)
+        pygame.draw.circle(
+            screen, TEAM_COLORS.get(self.team, (255, 214, 54)), (sx, sy), 2
+        )
+
+
+class DamagePopup:
+    def __init__(
+        self,
+        x: float,
+        y: float,
+        text: str,
+        color: tuple[int, int, int],
+        vx: float = 0.0,
+        vy: float = -85.0,
+        is_crit: bool = False,
+    ):
+        self.x = x
+        self.y = y
+        self.text = text
+        self.color = color
+        self.vx = vx
+        self.vy = vy
+        self.is_crit = is_crit
+        self.age = 0.0
+        self.max_age = 0.72
+        self.active = True
+
+    def update(self, dt: float) -> None:
+        if not self.active:
+            return
+        self.age += dt
+        if self.age >= self.max_age:
+            self.active = False
+            return
+        self.x += self.vx * dt
+        self.y += self.vy * dt
+        self.vy += 190.0 * dt
+        self.vx *= 0.94
+
+    def draw(
+        self,
+        screen: pygame.Surface,
+        cam_x: float,
+        font: pygame.font.Font,
+    ) -> None:
+        if not self.active:
+            return
+        sx = int(round(self.x - cam_x))
+        sy = int(round(self.y))
+        if sx < -60 or sx > screen.get_width() + 60:
+            return
+        surf = font.render(self.text, True, self.color)
+        shadow = font.render(self.text, True, (14, 14, 18))
+        draw_x = sx - surf.get_width() // 2
+        draw_y = sy - surf.get_height() // 2
+        screen.blit(shadow, (draw_x + 1, draw_y + 1))
+        screen.blit(surf, (draw_x, draw_y))

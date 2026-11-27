@@ -7,6 +7,7 @@ UNIT_POP_COST: dict[str, int] = {
     "sword": 1,
     "archidon": 2,
     "lanzatonio": 3,
+    "ninja": 4,
 }
 
 RANDOM_MATCHUP_KEY = "batalla_random"
@@ -44,6 +45,11 @@ _ALIASES = {
     "spearman": "lanzatonio",
     "lanza": "lanzatonio",
     "lanzas": "lanzatonio",
+    "ninja": "ninja",
+    "ninjas": "ninja",
+    "shadowrath": "ninja",
+    "shadowraths": "ninja",
+    "shinobi": "ninja",
 }
 
 
@@ -67,7 +73,7 @@ def expand_roster(spec: object) -> list[str]:
 
 
 def counts_from_roster(roster: Iterable[str]) -> dict[str, int]:
-    counts = {"sword": 0, "archidon": 0, "lanzatonio": 0}
+    counts = {"sword": 0, "archidon": 0, "lanzatonio": 0, "ninja": 0}
     for raw_kind in roster:
         kind = normalize_kind(str(raw_kind))
         if kind in counts:
