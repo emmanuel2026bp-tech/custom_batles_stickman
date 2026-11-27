@@ -31,6 +31,8 @@ _FORMATION_RANK: dict[str, int] = {
     "archidon": 2,
 }
 
+LEAP_POPUP_COLOR: tuple[int, int, int] = (255, 140, 24)
+
 
 def _sync_background_to_screen(screen: pygame.Surface, bg: ArenaBackground) -> int:
     w, h = screen.get_size()
@@ -58,6 +60,8 @@ class Fighter:
         self.speed = float(cfg["speed"])
         self.cooldown = float(cfg["cooldown"])
         self.arrow_block_chance = float(cfg.get("arrow_block_chance", 0.0))
+        self.leap_attack_chance = float(cfg.get("leap_attack_chance", 0.20))
+        self.leap_damage_mult = float(cfg.get("leap_damage_mult", 1.40))
         self.color: tuple[int, int, int] = cfg["color"]
         self.team_color: tuple[int, int, int] = TEAM_COLORS.get(team, (255, 214, 54))
         self.vs_mult: dict[str, float] = dict(cfg.get("vs_mult", {}))
@@ -65,6 +69,10 @@ class Fighter:
         self.hit_flash = 0.0
         self.walk_phase = float(idx) * 0.7
         self.death_splattered = False
+        self.leap_timer = 0.0
+        self.leap_duration = 0.28
+        self.leap_height = 18.0
+        self.last_attack_was_leap = False
 
     @property
     def alive(self) -> bool:
@@ -74,7 +82,15 @@ class Fighter:
         self, target: "Fighter", rng: random.Random | None = None
     ) -> int:
         mult = self.vs_mult.get(target.kind, 1.0)
-        return max(1, int(round(self.atk * mult)))
+        leap_mult = 1.0
+        self.last_attack_was_leap = False
+        if self.kind == "sword" and self.leap_attack_chance > 0.0:
+            roll_rng = rng if rng is not None else random
+            if roll_rng.random() < self.leap_attack_chance:
+                leap_mult = self.leap_damage_mult
+                self.last_attack_was_leap = True
+                self.leap_timer = self.leap_duration
+        return max(1, int(round(self.atk * mult * leap_mult)))
 
     def try_block_arrow_from_kind(self, attacker_kind: str, rng: random.Random) -> bool:
         if attacker_kind != "archidon" or self.arrow_block_chance <= 0.0:
@@ -426,6 +442,7 @@ class Fighter:
 
         self.atk_timer = max(0.0, self.atk_timer - dt)
         self.hit_flash = max(0.0, self.hit_flash - dt)
+        self.leap_timer = max(0.0, self.leap_timer - dt)
 
         live_enemies = [e for e in enemies if e.alive]
         if not live_enemies:
@@ -470,12 +487,22 @@ class Fighter:
                     dmg_taken = min(target.hp, dmg)
                     target.hp = max(0, target.hp - dmg)
                     target.hit_flash = 0.14
+                    popup_txt = (
+                        f"SALTO -{dmg_taken}!"
+                        if self.last_attack_was_leap
+                        else f"-{dmg_taken}"
+                    )
+                    popup_col = (
+                        LEAP_POPUP_COLOR
+                        if self.last_attack_was_leap
+                        else target.team_color
+                    )
                     popups.append(
                         DamagePopup(
                             target.x + rng.uniform(-6.0, 6.0),
                             float(target.ground_y - 44.0),
-                            f"-{dmg_taken}",
-                            target.team_color,
+                            popup_txt,
+                            popup_col,
                             vx=rng.uniform(-42.0, 42.0),
                             vy=-rng.uniform(85.0, 135.0),
                         )
@@ -494,6 +521,11 @@ class Fighter:
     ) -> None:
         if not self.alive:
             return
+        leap_offset = 0.0
+        if self.leap_timer > 0.0 and self.leap_duration > 0.0:
+            progress = 1.0 - (self.leap_timer / self.leap_duration)
+            leap_offset = math.sin(progress * math.pi) * self.leap_height
+        effective_ground_y = int(round(self.ground_y - leap_offset))
         draw_fighter_visual(
             screen,
             cam_x,
@@ -502,7 +534,7 @@ class Fighter:
             team=self.team,
             team_color=self.team_color,
             x=self.x,
-            ground_y=self.ground_y,
+            ground_y=effective_ground_y,
             hp=self.hp,
             max_hp=self.max_hp,
             walk_phase=self.walk_phase,
@@ -791,13 +823,18 @@ def _run_combat_loop(
             avail_btn_w = max(180, panel_w - 32 - btn_gap * 2)
             pause_edit_btn.width = max(60, int(avail_btn_w * 0.32))
             pause_resume_btn.width = max(72, int(avail_btn_w * 0.38))
-            pause_exit_btn.width = max(56, avail_btn_w - pause_edit_btn.width - pause_resume_btn.width)
+            pause_exit_btn.width = max(
+                56, avail_btn_w - pause_edit_btn.width - pause_resume_btn.width
+            )
             pause_edit_btn.height = 34
             pause_resume_btn.height = 34
             pause_exit_btn.height = 34
 
             total_pw = (
-                pause_edit_btn.width + pause_resume_btn.width + pause_exit_btn.width + btn_gap * 2
+                pause_edit_btn.width
+                + pause_resume_btn.width
+                + pause_exit_btn.width
+                + btn_gap * 2
             )
             p_start_x = panel_rect.centerx - total_pw // 2
             p_btn_y = panel_rect.y + 68
@@ -858,7 +895,9 @@ def _run_combat_loop(
             avail_end_w = max(180, box_w - 32 - btn_gap * 2)
             edit_btn.width = max(64, int(avail_end_w * 0.34))
             replay_btn.width = max(72, int(avail_end_w * 0.36))
-            exit_btn.width = max(56, avail_end_w - edit_btn.width - replay_btn.width)
+            exit_btn.width = max(
+                56, avail_end_w - edit_btn.width - replay_btn.width
+            )
             edit_btn.height = 34
             replay_btn.height = 34
             exit_btn.height = 34
@@ -878,7 +917,9 @@ def _run_combat_loop(
             ):
                 col = hov_c if r_btn.collidepoint(mouse_pos) else base_c
                 pygame.draw.rect(screen, col, r_btn, border_radius=6)
-                pygame.draw.rect(screen, (226, 224, 235), r_btn, width=1, border_radius=6)
+                pygame.draw.rect(
+                    screen, (226, 224, 235), r_btn, width=1, border_radius=6
+                )
                 t_s = font_small.render(txt, True, (248, 248, 252))
                 screen.blit(
                     t_s,

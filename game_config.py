@@ -19,6 +19,8 @@ UNIT_STATS: dict[str, dict[str, object]] = {
         "speed": 88.0,
         "cooldown": 1.0,
         "arrow_block_chance": 0.0,
+        "leap_attack_chance": 0.20,
+        "leap_damage_mult": 1.40,
         "color": (218, 134, 64),
         "vs_mult": {
             "sword": 23.0 / 13,
@@ -37,7 +39,7 @@ UNIT_STATS: dict[str, dict[str, object]] = {
         "color": (92, 184, 118),
         "vs_mult": {
             "sword": 15.0 / 10.0,
-            "archidon": 25.0 / 10,
+            "archidon": 18.0 / 10,
             "lanzatonio": 12.0 / 10.0,
         },
     },
@@ -48,12 +50,12 @@ UNIT_STATS: dict[str, dict[str, object]] = {
         "range": 56.0,
         "speed": 96.0,
         "cooldown": 1.3,
-        "arrow_block_chance": 0.20,
+        "arrow_block_chance": 0.25,
         "color": (118, 152, 214),
         "vs_mult": {
             "sword": 1.0,
             "archidon": 17.0 / 15.0,
-            "lanzatonio": 19.0 / 15,
+            "lanzatonio": 29.0 / 15,
         },
     },
 }
