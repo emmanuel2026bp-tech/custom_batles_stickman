@@ -27,6 +27,10 @@ def _team_pop(counts: dict[str, int]) -> int:
     return sum(max(0, counts.get(k, 0)) * _unit_pop_cost(k) for k in UNIT_ORDER)
 
 
+def _team_units_count(counts: dict[str, int]) -> int:
+    return sum(max(0, counts.get(k, 0)) for k in UNIT_ORDER)
+
+
 def _sync_bg(screen: pygame.Surface, bg: ArenaBackground) -> None:
     w, h = screen.get_size()
     new_gy = h - 106
@@ -49,9 +53,14 @@ def _fit_text(
             return surf
     smallest = fonts[-1]
     trimmed = text
-    while len(trimmed) > 1 and smallest.render(trimmed + "...", True, color).get_width() > max_w:
+    while (
+        len(trimmed) > 1
+        and smallest.render(trimmed + "...", True, color).get_width() > max_w
+    ):
         trimmed = trimmed[:-1]
-    return smallest.render(trimmed + "..." if len(trimmed) < len(text) else trimmed, True, color)
+    return smallest.render(
+        trimmed + "..." if len(trimmed) < len(text) else trimmed, True, color
+    )
 
 
 def _random_counts_for_cap(pop_cap: int, rng: random.Random) -> dict[str, int]:
@@ -293,17 +302,27 @@ def run_match_editor(
         row_area_h = max(78, col_h - 44)
         row_step = row_area_h / len(UNIT_ORDER)
 
+        a_minus10_btns: dict[str, pygame.Rect] = {}
         a_minus_btns: dict[str, pygame.Rect] = {}
         a_plus_btns: dict[str, pygame.Rect] = {}
+        a_plus10_btns: dict[str, pygame.Rect] = {}
+
+        b_minus10_btns: dict[str, pygame.Rect] = {}
         b_minus_btns: dict[str, pygame.Rect] = {}
         b_plus_btns: dict[str, pygame.Rect] = {}
+        b_plus10_btns: dict[str, pygame.Rect] = {}
 
         for idx, kind in enumerate(UNIT_ORDER):
             ry = int(round(card_a.y + 36 + idx * row_step))
-            a_minus_btns[kind] = pygame.Rect(card_a.right - 74, ry, 26, 24)
-            a_plus_btns[kind] = pygame.Rect(card_a.right - 40, ry, 26, 24)
-            b_minus_btns[kind] = pygame.Rect(card_b.right - 74, ry, 26, 24)
-            b_plus_btns[kind] = pygame.Rect(card_b.right - 40, ry, 26, 24)
+            a_plus10_btns[kind] = pygame.Rect(card_a.right - 44, ry, 34, 24)
+            a_plus_btns[kind] = pygame.Rect(card_a.right - 74, ry, 26, 24)
+            a_minus_btns[kind] = pygame.Rect(card_a.right - 104, ry, 26, 24)
+            a_minus10_btns[kind] = pygame.Rect(card_a.right - 142, ry, 34, 24)
+
+            b_plus10_btns[kind] = pygame.Rect(card_b.right - 44, ry, 34, 24)
+            b_plus_btns[kind] = pygame.Rect(card_b.right - 74, ry, 26, 24)
+            b_minus_btns[kind] = pygame.Rect(card_b.right - 104, ry, 26, 24)
+            b_minus10_btns[kind] = pygame.Rect(card_b.right - 142, ry, 34, 24)
 
         footer_btn_h = 34
         footer_y = panel.bottom - footer_btn_h - 14
@@ -335,6 +354,8 @@ def run_match_editor(
 
         pop_a = _team_pop(counts_a)
         pop_b = _team_pop(counts_b)
+        units_a = _team_units_count(counts_a)
+        units_b = _team_units_count(counts_b)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -356,19 +377,27 @@ def run_match_editor(
                     apply_preset(preset_keys[idx])
                     pop_a = _team_pop(counts_a)
                     pop_b = _team_pop(counts_b)
+                    units_a = _team_units_count(counts_a)
+                    units_b = _team_units_count(counts_b)
                 elif event.key == pygame.K_RIGHT:
                     idx = (preset_keys.index(current_preset) + 1) % len(preset_keys)
                     apply_preset(preset_keys[idx])
                     pop_a = _team_pop(counts_a)
                     pop_b = _team_pop(counts_b)
+                    units_a = _team_units_count(counts_a)
+                    units_b = _team_units_count(counts_b)
                 elif event.key == pygame.K_r:
                     randomize_both_teams()
                     pop_a = _team_pop(counts_a)
                     pop_b = _team_pop(counts_b)
+                    units_a = _team_units_count(counts_a)
+                    units_b = _team_units_count(counts_b)
                 elif event.key == pygame.K_c:
                     clear_both_teams()
                     pop_a = 0
                     pop_b = 0
+                    units_a = 0
+                    units_b = 0
                 elif event.key == pygame.K_F11:
                     pygame.display.toggle_fullscreen()
                     resize_ignore_timer = 0.2
@@ -383,6 +412,8 @@ def run_match_editor(
                     apply_preset(preset_keys[idx])
                     pop_a = _team_pop(counts_a)
                     pop_b = _team_pop(counts_b)
+                    units_a = _team_units_count(counts_a)
+                    units_b = _team_units_count(counts_b)
                 elif next_btn.collidepoint(pos):
                     idx = (preset_keys.index(current_preset) + 1) % len(
                         preset_keys
@@ -390,14 +421,20 @@ def run_match_editor(
                     apply_preset(preset_keys[idx])
                     pop_a = _team_pop(counts_a)
                     pop_b = _team_pop(counts_b)
+                    units_a = _team_units_count(counts_a)
+                    units_b = _team_units_count(counts_b)
                 elif clear_btn.collidepoint(pos):
                     clear_both_teams()
                     pop_a = 0
                     pop_b = 0
+                    units_a = 0
+                    units_b = 0
                 elif random_btn.collidepoint(pos):
                     randomize_both_teams()
                     pop_a = _team_pop(counts_a)
                     pop_b = _team_pop(counts_b)
+                    units_a = _team_units_count(counts_a)
+                    units_b = _team_units_count(counts_b)
                 elif start_menu_btn.collidepoint(pos):
                     return None
                 elif play_btn.collidepoint(pos):
@@ -409,26 +446,53 @@ def run_match_editor(
                 else:
                     handled = False
                     for kind in UNIT_ORDER:
+                        if a_minus10_btns[kind].collidepoint(pos):
+                            counts_a[kind] = max(0, counts_a[kind] - 10)
+                            pop_a = _team_pop(counts_a)
+                            units_a = _team_units_count(counts_a)
+                            handled = True
+                            break
                         if a_minus_btns[kind].collidepoint(pos):
                             counts_a[kind] = max(0, counts_a[kind] - 1)
                             pop_a = _team_pop(counts_a)
+                            units_a = _team_units_count(counts_a)
                             handled = True
                             break
                         if a_plus_btns[kind].collidepoint(pos):
-                            if pop_a + _unit_pop_cost(kind) <= pop_cap:
-                                counts_a[kind] += 1
-                                pop_a = _team_pop(counts_a)
+                            counts_a[kind] += 1
+                            pop_a = _team_pop(counts_a)
+                            units_a = _team_units_count(counts_a)
+                            handled = True
+                            break
+                        if a_plus10_btns[kind].collidepoint(pos):
+                            counts_a[kind] += 10
+                            pop_a = _team_pop(counts_a)
+                            units_a = _team_units_count(counts_a)
+                            handled = True
+                            break
+
+                        if b_minus10_btns[kind].collidepoint(pos):
+                            counts_b[kind] = max(0, counts_b[kind] - 10)
+                            pop_b = _team_pop(counts_b)
+                            units_b = _team_units_count(counts_b)
                             handled = True
                             break
                         if b_minus_btns[kind].collidepoint(pos):
                             counts_b[kind] = max(0, counts_b[kind] - 1)
                             pop_b = _team_pop(counts_b)
+                            units_b = _team_units_count(counts_b)
                             handled = True
                             break
                         if b_plus_btns[kind].collidepoint(pos):
-                            if pop_b + _unit_pop_cost(kind) <= pop_cap:
-                                counts_b[kind] += 1
-                                pop_b = _team_pop(counts_b)
+                            counts_b[kind] += 1
+                            pop_b = _team_pop(counts_b)
+                            units_b = _team_units_count(counts_b)
+                            handled = True
+                            break
+                        if b_plus10_btns[kind].collidepoint(pos):
+                            counts_b[kind] += 10
+                            pop_b = _team_pop(counts_b)
+                            units_b = _team_units_count(counts_b)
                             handled = True
                             break
                     if not handled:
@@ -437,6 +501,8 @@ def run_match_editor(
                                 apply_preset(pkey)
                                 pop_a = _team_pop(counts_a)
                                 pop_b = _team_pop(counts_b)
+                                units_a = _team_units_count(counts_a)
+                                units_b = _team_units_count(counts_b)
                                 break
 
         bg.draw(screen, 0.0)
@@ -456,7 +522,7 @@ def run_match_editor(
         )
 
         preset_label_txt = (
-            f"Preset: {get_matchup_label(current_preset)} ({pop_cap} Pob)"
+            f"Preset: {get_matchup_label(current_preset)} (Ref {pop_cap} Pob • Sin límite)"
         )
         max_preset_w = max(80, clear_btn.left - (next_btn.right + 22))
         preset_lbl = _fit_text(
@@ -483,13 +549,13 @@ def run_match_editor(
         )
 
         hdr_a = _fit_text(
-            f"EQUIPO A | Pob {pop_cap} ({pop_a})",
+            f"EQUIPO A | Pob {pop_a} ({units_a})",
             max(60, card_a.w - 28),
             (font_header, font_item, font_small),
             TEAM_COLORS["A"],
         )
         hdr_b = _fit_text(
-            f"EQUIPO B | Pob {pop_cap} ({pop_b})",
+            f"EQUIPO B | Pob {pop_b} ({units_b})",
             max(60, card_b.w - 28),
             (font_header, font_item, font_small),
             TEAM_COLORS["B"],
@@ -501,7 +567,7 @@ def run_match_editor(
             ry = int(round(card_a.y + 36 + idx * row_step))
             cost = _unit_pop_cost(kind)
             label = UNIT_STATS[kind]["label"]
-            max_row_txt_w = max(50, a_minus_btns[kind].left - (card_a.x + 22))
+            max_row_txt_w = max(50, a_minus10_btns[kind].left - (card_a.x + 22))
 
             txt_a = _fit_text(
                 f"{label} ({cost}): {counts_a[kind]}",
@@ -566,19 +632,15 @@ def run_match_editor(
         )
 
         for kind in UNIT_ORDER:
-            for btn_r, sym, enabled in (
-                (a_minus_btns[kind], "-", counts_a[kind] > 0),
-                (
-                    a_plus_btns[kind],
-                    "+",
-                    pop_a + _unit_pop_cost(kind) <= pop_cap,
-                ),
-                (b_minus_btns[kind], "-", counts_b[kind] > 0),
-                (
-                    b_plus_btns[kind],
-                    "+",
-                    pop_b + _unit_pop_cost(kind) <= pop_cap,
-                ),
+            for btn_r, sym, enabled, use_small_font in (
+                (a_minus10_btns[kind], "-10", counts_a[kind] > 0, True),
+                (a_minus_btns[kind], "-", counts_a[kind] > 0, False),
+                (a_plus_btns[kind], "+", True, False),
+                (a_plus10_btns[kind], "+10", True, True),
+                (b_minus10_btns[kind], "-10", counts_b[kind] > 0, True),
+                (b_minus_btns[kind], "-", counts_b[kind] > 0, False),
+                (b_plus_btns[kind], "+", True, False),
+                (b_plus10_btns[kind], "+10", True, True),
             ):
                 if not enabled:
                     col = (36, 39, 50)
@@ -594,7 +656,8 @@ def run_match_editor(
                     width=1,
                     border_radius=5,
                 )
-                s_t = font_header.render(
+                fnt_btn = font_small if use_small_font else font_header
+                s_t = fnt_btn.render(
                     sym, True, (250, 250, 252) if enabled else (130, 135, 148)
                 )
                 screen.blit(

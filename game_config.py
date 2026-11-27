@@ -13,17 +13,17 @@ TEAM_COLORS: dict[str, tuple[int, int, int]] = {
 UNIT_STATS: dict[str, dict[str, object]] = {
     "sword": {
         "label": "Sword",
-        "hp": 95,
+        "hp": 85,
         "atk": 13,
         "range": 38.0,
-        "speed": 96.0,
+        "speed": 88.0,
         "cooldown": 1.0,
         "arrow_block_chance": 0.0,
         "color": (218, 134, 64),
         "vs_mult": {
             "sword": 23.0 / 13,
-            "archidon": 11.0 / 13.0,
-            "lanzatonio": 15.0 / 13.0,
+            "archidon": 8.0 / 13.0,
+            "lanzatonio": 13.0 / 13.0,
         },
     },
     "archidon": {
@@ -36,9 +36,9 @@ UNIT_STATS: dict[str, dict[str, object]] = {
         "arrow_block_chance": 0.0,
         "color": (92, 184, 118),
         "vs_mult": {
-            "sword": 1.4,
+            "sword": 15.0 / 10.0,
             "archidon": 25.0 / 10,
-            "lanzatonio": 1.0,
+            "lanzatonio": 12.0 / 10.0,
         },
     },
     "lanzatonio": {
