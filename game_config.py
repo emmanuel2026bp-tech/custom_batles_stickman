@@ -80,7 +80,6 @@ UNIT_STATS: dict[str, dict[str, object]] = {
 GLOBAL_FIGHT_PRESETS: tuple[
     tuple[str, str, dict[str, int] | None, dict[str, int] | None, int], ...
 ] = (
-    # Preset por defecto: 1 lanzatonio, 2 archidon, 3 espaderos (A) vs 2 lanzatonios, 1 archidon, 2 espaderos (B)
     (
         "patrulla_inicial",
         "Patrulla Inicial",
@@ -89,18 +88,25 @@ GLOBAL_FIGHT_PRESETS: tuple[
         10,
     ),
     (
-        "duelo_gigantes",
-        "Colosos y Tiradores",
-        {"sword": 3, "archidon": 3, "lanzatonio": 7},
-        {"sword": 3, "archidon": 3, "lanzatonio": 7},
+        "sword_vs_arco",
+        "Sword vs Arco",
+        {"sword": 20, "archidon": 0, "lanzatonio": 0},
+        {"sword": 0, "archidon": 10, "lanzatonio": 0},
+        20,
+    ),
+    (
+        "arco_vs_lanza",
+        "Arco vs Lanza",
+        {"sword": 0, "archidon": 15, "lanzatonio": 0},
+        {"sword": 0, "archidon": 0, "lanzatonio": 10},
         30,
     ),
     (
-        "tormenta_flechas",
-        "Lluvia de Flechas",
-        {"sword": 4, "archidon": 7, "lanzatonio": 2},
-        {"sword": 6, "archidon": 6, "lanzatonio": 2},
-        24,
+        "lanza_vs_sword",
+        "Lanza vs Sword",
+        {"sword": 0, "archidon": 0, "lanzatonio": 10},
+        {"sword": 30, "archidon": 0, "lanzatonio": 0},
+        30,
     ),
     (
         "spearcher",
@@ -108,85 +114,6 @@ GLOBAL_FIGHT_PRESETS: tuple[
         {"sword": 0, "archidon": 10, "lanzatonio": 5},
         {"sword": 0, "archidon": 5, "lanzatonio": 8},
         35,
-    ),
-    (
-        "choque_murallas",
-        "Falange vs Falange",
-        {"sword": 9, "archidon": 3, "lanzatonio": 7},
-        {"sword": 6, "archidon": 6, "lanzatonio": 6},
-        36,
-    ),
-    (
-        "batalla_60p",
-        "Frente Abierto",
-        {"sword": 10, "archidon": 10, "lanzatonio": 10},
-        {"sword": 12, "archidon": 9, "lanzatonio": 10},
-        60,
-    ),
-    (
-        "marea_75p",
-        "Marea Bélica",
-        {"sword": 12, "archidon": 12, "lanzatonio": 13},
-        {"sword": 15, "archidon": 12, "lanzatonio": 12},
-        75,
-    ),
-    (
-        "asedio_90p",
-        "Sitio Mayor",
-        {"sword": 15, "archidon": 15, "lanzatonio": 15},
-        {"sword": 18, "archidon": 12, "lanzatonio": 16},
-        90,
-    ),
-    (
-        "choque_100p",
-        "Choque de Campaña",
-        {"sword": 16, "archidon": 15, "lanzatonio": 18},
-        {"sword": 20, "archidon": 16, "lanzatonio": 16},
-        100,
-    ),
-    # Escenarios de prueba tipo piedra, papel o tijera (PPT)
-    (
-        "ppt_lanzas_vs_espadas",
-        "PPT: Lanzas vs Espadas",
-        {"sword": 0, "archidon": 0, "lanzatonio": 33},
-        {"sword": 100, "archidon": 0, "lanzatonio": 0},
-        100,
-    ),
-    (
-        "ppt_espadas_vs_arcos",
-        "PPT: Espadas vs Arcos",
-        {"sword": 100, "archidon": 0, "lanzatonio": 0},
-        {"sword": 0, "archidon": 50, "lanzatonio": 0},
-        100,
-    ),
-    (
-        "ppt_arcos_vs_lanzas",
-        "PPT: Arcos vs Lanzas",
-        {"sword": 0, "archidon": 50, "lanzatonio": 0},
-        {"sword": 0, "archidon": 0, "lanzatonio": 33},
-        100,
-    ),
-    # Batallas de gran escala
-    (
-        "legion_120p",
-        "Legión de Hierro",
-        {"sword": 21, "archidon": 18, "lanzatonio": 21},
-        {"sword": 24, "archidon": 18, "lanzatonio": 20},
-        120,
-    ),
-    (
-        "horda_150p",
-        "Horda Desatada",
-        {"sword": 27, "archidon": 24, "lanzatonio": 25},
-        {"sword": 30, "archidon": 21, "lanzatonio": 26},
-        150,
-    ),
-    (
-        "titan_180p",
-        "Marcha de Titanes",
-        {"sword": 30, "archidon": 27, "lanzatonio": 32},
-        {"sword": 36, "archidon": 24, "lanzatonio": 32},
-        180,
     ),
     (
         "apocalipsis_210p",
