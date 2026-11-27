@@ -32,6 +32,7 @@ _FORMATION_RANK: dict[str, int] = {
 }
 
 LEAP_POPUP_COLOR: tuple[int, int, int] = (255, 140, 24)
+CRIT_POPUP_COLOR: tuple[int, int, int] = (255, 132, 20)
 
 
 def _sync_background_to_screen(screen: pygame.Surface, bg: ArenaBackground) -> int:
@@ -62,6 +63,8 @@ class Fighter:
         self.arrow_block_chance = float(cfg.get("arrow_block_chance", 0.0))
         self.leap_attack_chance = float(cfg.get("leap_attack_chance", 0.20))
         self.leap_damage_mult = float(cfg.get("leap_damage_mult", 1.40))
+        self.crit_chance = float(cfg.get("crit_chance", 0.0))
+        self.crit_damage_mult = float(cfg.get("crit_damage_mult", 1.35))
         self.color: tuple[int, int, int] = cfg["color"]
         self.team_color: tuple[int, int, int] = TEAM_COLORS.get(team, (255, 214, 54))
         self.vs_mult: dict[str, float] = dict(cfg.get("vs_mult", {}))
@@ -73,6 +76,7 @@ class Fighter:
         self.leap_duration = 0.28
         self.leap_height = 18.0
         self.last_attack_was_leap = False
+        self.last_attack_was_crit = False
 
     @property
     def alive(self) -> bool:
@@ -83,14 +87,23 @@ class Fighter:
     ) -> int:
         mult = self.vs_mult.get(target.kind, 1.0)
         leap_mult = 1.0
+        crit_mult = 1.0
         self.last_attack_was_leap = False
+        self.last_attack_was_crit = False
+        roll_rng = rng if rng is not None else random
+
         if self.kind == "sword" and self.leap_attack_chance > 0.0:
-            roll_rng = rng if rng is not None else random
             if roll_rng.random() < self.leap_attack_chance:
                 leap_mult = self.leap_damage_mult
                 self.last_attack_was_leap = True
                 self.leap_timer = self.leap_duration
-        return max(1, int(round(self.atk * mult * leap_mult)))
+
+        if self.kind == "lanzatonio" and self.crit_chance > 0.0:
+            if roll_rng.random() < self.crit_chance:
+                crit_mult = self.crit_damage_mult
+                self.last_attack_was_crit = True
+
+        return max(1, int(round(self.atk * mult * leap_mult * crit_mult)))
 
     def try_block_arrow_from_kind(self, attacker_kind: str, rng: random.Random) -> bool:
         if attacker_kind != "archidon" or self.arrow_block_chance <= 0.0:
@@ -487,16 +500,18 @@ class Fighter:
                     dmg_taken = min(target.hp, dmg)
                     target.hp = max(0, target.hp - dmg)
                     target.hit_flash = 0.14
-                    popup_txt = (
-                        f"SALTO -{dmg_taken}!"
-                        if self.last_attack_was_leap
-                        else f"-{dmg_taken}"
-                    )
-                    popup_col = (
-                        LEAP_POPUP_COLOR
-                        if self.last_attack_was_leap
-                        else target.team_color
-                    )
+                    if self.last_attack_was_leap:
+                        popup_txt = f"SALTO -{dmg_taken}!"
+                        popup_col = LEAP_POPUP_COLOR
+                        is_crit = False
+                    elif self.last_attack_was_crit:
+                        popup_txt = f"-{dmg_taken}"
+                        popup_col = CRIT_POPUP_COLOR
+                        is_crit = True
+                    else:
+                        popup_txt = f"-{dmg_taken}"
+                        popup_col = target.team_color
+                        is_crit = False
                     popups.append(
                         DamagePopup(
                             target.x + rng.uniform(-6.0, 6.0),
@@ -505,6 +520,7 @@ class Fighter:
                             popup_col,
                             vx=rng.uniform(-42.0, 42.0),
                             vy=-rng.uniform(85.0, 135.0),
+                            is_crit=is_crit,
                         )
                     )
                     died = not target.alive
@@ -613,6 +629,7 @@ def _run_combat_loop(
     font_hud = pygame.font.SysFont("consolas", 14, bold=True)
     font_small = pygame.font.SysFont("consolas", 12, bold=True)
     font_dmg = pygame.font.SysFont("consolas", 13, bold=True)
+    font_crit = pygame.font.SysFont("consolas", 16, bold=True)
     font_banner = pygame.font.SysFont("consolas", 28, bold=True)
 
     pause_edit_btn = pygame.Rect(0, 0, 120, 34)
@@ -772,7 +789,7 @@ def _run_combat_loop(
             a.draw(screen, cam_x)
 
         for pop in popups:
-            pop.draw(screen, cam_x, font_dmg)
+            pop.draw(screen, cam_x, font_dmg, font_crit)
 
         hud_rect = pygame.Rect(0, 0, w, 34)
         pygame.draw.rect(screen, (18, 20, 26), hud_rect)

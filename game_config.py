@@ -3,6 +3,20 @@ WIDTH = 1280
 HEIGHT = 720
 ARENA_WORLD_WIDTH = 2400
 
+# Poblaciones aleatorias simultáneas por equipo en Batalla Random
+RANDOM_BATTLE_POPULATIONS: tuple[int, ...] = (
+    12,
+    20,
+    30,
+    40,
+    50,
+    60,
+    70,
+    80,
+    90,
+    100,
+)
+
 # Colores distintivos por bando en la arena y en el HUD
 TEAM_COLORS: dict[str, tuple[int, int, int]] = {
     "A": (255, 214, 54),  # Equipo A (Amarillo)
@@ -13,7 +27,7 @@ TEAM_COLORS: dict[str, tuple[int, int, int]] = {
 UNIT_STATS: dict[str, dict[str, object]] = {
     "sword": {
         "label": "Sword",
-        "hp": 85,
+        "hp": 95,
         "atk": 13,
         "range": 38.0,
         "speed": 88.0,
@@ -32,7 +46,7 @@ UNIT_STATS: dict[str, dict[str, object]] = {
         "label": "Archidon",
         "hp": 75,
         "atk": 10,
-        "range": 380.0,
+        "range": 500.0,
         "speed": 82.0,
         "cooldown": 1.0,
         "arrow_block_chance": 0.0,
@@ -51,6 +65,8 @@ UNIT_STATS: dict[str, dict[str, object]] = {
         "speed": 96.0,
         "cooldown": 1.3,
         "arrow_block_chance": 0.25,
+        "crit_chance": 0.20,
+        "crit_damage_mult": 1.35,
         "color": (118, 152, 214),
         "vs_mult": {
             "sword": 1.0,
@@ -69,7 +85,7 @@ GLOBAL_FIGHT_PRESETS: tuple[
         "patrulla_inicial",
         "Patrulla Inicial",
         {"sword": 3, "archidon": 2, "lanzatonio": 1},
-        {"sword": 2, "archidon": 1, "lanzatonio": 2},
+        {"sword": 0, "archidon": 2, "lanzatonio": 2},
         10,
     ),
     (
@@ -87,19 +103,18 @@ GLOBAL_FIGHT_PRESETS: tuple[
         24,
     ),
     (
+        "spearcher",
+        "Spearcher",
+        {"sword": 0, "archidon": 10, "lanzatonio": 5},
+        {"sword": 0, "archidon": 5, "lanzatonio": 8},
+        35,
+    ),
+    (
         "choque_murallas",
         "Falange vs Falange",
         {"sword": 9, "archidon": 3, "lanzatonio": 7},
         {"sword": 6, "archidon": 6, "lanzatonio": 6},
         36,
-    ),
-    # None en ambos equipos indica generación aleatoria según el tope de población
-    (
-        "caos_arena",
-        "Escaramuza Aleatoria",
-        None,
-        None,
-        40,
     ),
     (
         "batalla_60p",

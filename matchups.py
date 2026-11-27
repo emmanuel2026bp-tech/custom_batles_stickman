@@ -1,7 +1,7 @@
 import random
 from typing import Iterable
 
-from game_config import GLOBAL_FIGHT_PRESETS
+from game_config import GLOBAL_FIGHT_PRESETS, RANDOM_BATTLE_POPULATIONS
 
 UNIT_POP_COST: dict[str, int] = {
     "sword": 1,
@@ -9,7 +9,7 @@ UNIT_POP_COST: dict[str, int] = {
     "lanzatonio": 3,
 }
 
-RANDOM_MATCHUP_KEY = "caos_arena"
+RANDOM_MATCHUP_KEY = "batalla_random"
 RANDOM_TARGET_POPULATION = 40
 
 ACTIVE_MATCHUP = "patrulla_inicial"
@@ -92,12 +92,20 @@ def calculate_population(counts: dict[str, int]) -> int:
     return total
 
 
+def pick_random_population(rng: random.Random | None = None) -> int:
+    rand = rng if rng is not None else random.Random()
+    return int(rand.choice(RANDOM_BATTLE_POPULATIONS))
+
+
 def generate_random_roster(
-    target_pop: int = RANDOM_TARGET_POPULATION,
+    target_pop: int | None = None,
     rng: random.Random | None = None,
 ) -> list[str]:
     rand = rng if rng is not None else random.Random()
-    remaining = max(0, int(target_pop))
+    chosen_pop = (
+        pick_random_population(rand) if target_pop is None else max(0, int(target_pop))
+    )
+    remaining = chosen_pop
     roster: list[str] = []
     kinds = tuple(UNIT_POP_COST.keys())
 
@@ -114,13 +122,19 @@ def generate_random_roster(
 
 
 def generate_random_armies(
-    target_pop: int = RANDOM_TARGET_POPULATION,
+    target_pop: int | None = None,
     rng: random.Random | None = None,
 ) -> tuple[list[str], list[str]]:
     rand = rng if rng is not None else random.Random()
+    pop_a = (
+        pick_random_population(rand) if target_pop is None else max(0, int(target_pop))
+    )
+    pop_b = (
+        pick_random_population(rand) if target_pop is None else max(0, int(target_pop))
+    )
     return (
-        generate_random_roster(target_pop=target_pop, rng=rand),
-        generate_random_roster(target_pop=target_pop, rng=rand),
+        generate_random_roster(target_pop=pop_a, rng=rand),
+        generate_random_roster(target_pop=pop_b, rng=rand),
     )
 
 

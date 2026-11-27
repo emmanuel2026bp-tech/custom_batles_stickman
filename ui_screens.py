@@ -5,6 +5,7 @@ import pygame
 from arena_background import ArenaBackground
 from game_config import (
     GLOBAL_FIGHT_PRESETS,
+    RANDOM_BATTLE_POPULATIONS,
     TEAM_COLORS,
     UNIT_STATS,
 )
@@ -76,6 +77,19 @@ def _random_counts_for_cap(pop_cap: int, rng: random.Random) -> dict[str, int]:
     return counts
 
 
+def _generate_simultaneous_random_teams(
+    rng: random.Random,
+) -> tuple[dict[str, int], dict[str, int], int, int]:
+    pop_a = int(rng.choice(RANDOM_BATTLE_POPULATIONS))
+    pop_b = int(rng.choice(RANDOM_BATTLE_POPULATIONS))
+    return (
+        _random_counts_for_cap(pop_a, rng),
+        _random_counts_for_cap(pop_b, rng),
+        pop_a,
+        pop_b,
+    )
+
+
 def _resolve_preset_counts(
     preset_key: str,
     rng: random.Random,
@@ -99,11 +113,8 @@ def _resolve_preset_counts(
     cap = max(1, int(pop_cap))
 
     if key == RANDOM_MATCHUP_KEY or (c_a is None and c_b is None):
-        return (
-            _random_counts_for_cap(cap, rng),
-            _random_counts_for_cap(cap, rng),
-            cap,
-        )
+        counts_a, counts_b, pop_a, pop_b = _generate_simultaneous_random_teams(rng)
+        return counts_a, counts_b, max(pop_a, pop_b)
 
     base_a = {k: 0 for k in UNIT_ORDER}
     base_b = {k: 0 for k in UNIT_ORDER}
@@ -261,9 +272,9 @@ def run_match_editor(
         counts_a, counts_b, pop_cap = _resolve_preset_counts(key, rng)
 
     def randomize_both_teams() -> None:
-        nonlocal counts_a, counts_b
-        counts_a = _random_counts_for_cap(pop_cap, rng)
-        counts_b = _random_counts_for_cap(pop_cap, rng)
+        nonlocal counts_a, counts_b, pop_cap
+        counts_a, counts_b, pop_a, pop_b = _generate_simultaneous_random_teams(rng)
+        pop_cap = max(pop_a, pop_b)
 
     def clear_both_teams() -> None:
         nonlocal counts_a, counts_b

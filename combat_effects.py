@@ -18,6 +18,7 @@ class DamagePopup:
         color: tuple[int, int, int],
         vx: float = 0.0,
         vy: float = -78.0,
+        is_crit: bool = False,
     ):
         self.x = x
         self.y = y
@@ -25,6 +26,7 @@ class DamagePopup:
         self.vy = vy
         self.text = text
         self.color = color
+        self.is_crit = is_crit
         self.life = 0.72
         self.max_life = 0.72
 
@@ -35,13 +37,20 @@ class DamagePopup:
         self.y += self.vy * dt
         return self.life > 0.0
 
-    def draw(self, screen: pygame.Surface, cam_x: float, font: pygame.font.Font) -> None:
+    def draw(
+        self,
+        screen: pygame.Surface,
+        cam_x: float,
+        font: pygame.font.Font,
+        crit_font: pygame.font.Font | None = None,
+    ) -> None:
         sx = int(round(self.x - cam_x))
         sy = int(round(self.y))
         if sx < -60 or sx > screen.get_width() + 60:
             return
-        surf = font.render(self.text, True, self.color)
-        shadow = font.render(self.text, True, (16, 16, 20))
+        active_font = crit_font if (self.is_crit and crit_font is not None) else font
+        surf = active_font.render(self.text, True, self.color)
+        shadow = active_font.render(self.text, True, (16, 16, 20))
         screen.blit(shadow, (sx - surf.get_width() // 2 + 1, sy + 1))
         screen.blit(surf, (sx - surf.get_width() // 2, sy))
 

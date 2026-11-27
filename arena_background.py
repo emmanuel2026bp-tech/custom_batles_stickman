@@ -12,9 +12,9 @@ except ImportError:
 TERRAIN_MENU_ARMORY = "armeria_menu"
 TERRAIN_MENU = "campo_verde"
 TERRAIN_AMPHITHEATER = "coliseo"
-TERRAIN_BARRANCO = "barranco"
+TERRAIN_OCEAN = "ocean"
 
-COMBAT_TERRAIN_VARIANTS = (TERRAIN_MENU, TERRAIN_AMPHITHEATER, TERRAIN_BARRANCO)
+COMBAT_TERRAIN_VARIANTS = (TERRAIN_MENU, TERRAIN_AMPHITHEATER, TERRAIN_OCEAN)
 TERRAIN_VARIANTS = (TERRAIN_MENU_ARMORY, *COMBAT_TERRAIN_VARIANTS)
 
 C_ARMORY_CEILING = (34, 30, 38)
@@ -571,7 +571,7 @@ def _build_procedural_8bit_amphitheater(
     return pygame.transform.scale(low, (scene_w, scene_h))
 
 
-def _build_procedural_8bit_barranco(
+def _build_procedural_8bit_ocean(
     scene_w: int, scene_h: int, ground_y: int, pixel_size: int = 4
 ) -> pygame.Surface:
     pw = max(240, scene_w // pixel_size)
@@ -828,8 +828,8 @@ class ArenaBackground:
             surf = _build_procedural_8bit_green_field(
                 self.world_w, self.height, self.ground_y, pixel_size=4
             )
-        elif self.terrain_variant == TERRAIN_BARRANCO:
-            surf = _build_procedural_8bit_barranco(
+        elif self.terrain_variant == TERRAIN_OCEAN:
+            surf = _build_procedural_8bit_ocean(
                 self.world_w, self.height, self.ground_y, pixel_size=4
             )
         else:
