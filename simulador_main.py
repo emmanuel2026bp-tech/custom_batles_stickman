@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import random
 import re
 import sys
@@ -163,7 +164,7 @@ def _spread_melee_combatants(
     world_w: int,
     eff_dt: float,
 ) -> None:
-    """Evita que las unidades cuerpo a cuerpo se amontonen en un mismo punto al pelear."""
+    """Agrupa las unidades cuerpo a cuerpo en un cúmulo compacto durante el choque."""
     if eff_dt <= 0.0:
         return
     alive_enemies = [e for e in enemies if e.alive]
@@ -182,17 +183,34 @@ def _spread_melee_combatants(
     if n < 2:
         return
 
-    min_melee_sep = 16.0
-    step_push = min(120.0 * eff_dt, 6.0)
+    engaged = [
+        f for f in melee_allies if min(abs(e.x - f.x) for e in alive_enemies) < 75.0
+    ]
+    if len(engaged) >= 2:
+        cluster_center_x = sum(f.x for f in engaged) / len(engaged)
+        pull_step = min(45.0 * eff_dt, 2.2)
+        for f in engaged:
+            delta = cluster_center_x - f.x
+            if abs(delta) > 8.0:
+                f.x = max(
+                    min_x,
+                    min(
+                        max_x,
+                        f.x + math.copysign(min(pull_step, abs(delta) * 0.25), delta),
+                    ),
+                )
+
+    min_melee_sep = 6.5
+    step_push = min(45.0 * eff_dt, 2.0)
 
     for i in range(n):
         fa = melee_allies[i]
-        near_enemy_a = min(abs(e.x - fa.x) for e in alive_enemies) < 95.0
+        near_enemy_a = min(abs(e.x - fa.x) for e in alive_enemies) < 85.0
         if not near_enemy_a:
             continue
         for j in range(i + 1, n):
             fb = melee_allies[j]
-            near_enemy_b = min(abs(e.x - fb.x) for e in alive_enemies) < 95.0
+            near_enemy_b = min(abs(e.x - fb.x) for e in alive_enemies) < 85.0
             if not near_enemy_b:
                 continue
 
@@ -204,7 +222,7 @@ def _spread_melee_combatants(
                 else:
                     direction = 1.0 if dx > 0.0 else -1.0
 
-                push = min(step_push, (min_melee_sep - dist) * 0.5)
+                push = min(step_push, (min_melee_sep - dist) * 0.35)
                 na = fa.x - direction * push
                 nb = fb.x + direction * push
 

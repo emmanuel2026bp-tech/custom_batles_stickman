@@ -163,8 +163,8 @@ GLOBAL_FIGHT_PRESETS: tuple[
     (
         "apocalipsis_210p",
         "Cataclismo Total",
-        {"sword": 36, "archidon": 33, "lanzatonio": 36, "ninja": 0},
-        {"sword": 42, "archidon": 30, "lanzatonio": 36, "ninja": 0},
+        {"sword": 30, "archidon": 29, "lanzatonio": 30, "ninja": 8},
+        {"sword": 36, "archidon": 26, "lanzatonio": 30, "ninja": 8},
         210,
     ),
 )

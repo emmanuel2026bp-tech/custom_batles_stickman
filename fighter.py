@@ -55,6 +55,7 @@ class Fighter:
         self.leap_timer = 0.0
         self.leap_duration = 0.28
         self.leap_height = 18.0
+        self.pile_offset_y = 0.0
         self.last_attack_was_leap = False
         self.last_attack_was_crit = False
 
@@ -439,7 +440,8 @@ class Fighter:
     ) -> float:
         if self.kind == "archidon":
             return 0.0
-        min_sep = 16.0
+        # Separación compacta para que las unidades se apelotonen en un cúmulo denso
+        min_sep = 7.0
         push = 0.0
         for other in allies + enemies:
             if other is self or not other.alive or other.kind == "archidon":
@@ -449,12 +451,41 @@ class Fighter:
             if 0.0 < adx < min_sep:
                 strength = (min_sep - adx) / min_sep
                 if other is target:
-                    push += math.copysign(strength * 0.25, dx)
+                    push += math.copysign(strength * 0.08, dx)
                 else:
-                    push += math.copysign(strength * 0.65, dx)
+                    push += math.copysign(strength * 0.22, dx)
             elif adx == 0.0:
-                push += 0.2 if (self.idx % 2 == 0) else -0.2
-        return max(-0.85, min(0.85, push))
+                push += 0.05 if (self.idx % 2 == 0) else -0.05
+        return max(-0.35, min(0.35, push))
+
+    def _update_pile_offset(
+        self,
+        dt: float,
+        allies: list["Fighter"],
+        enemies: list["Fighter"],
+        dist_to_target: float,
+    ) -> None:
+        if self.kind == "archidon":
+            self.pile_offset_y = max(0.0, self.pile_offset_y - 45.0 * dt)
+            return
+
+        in_mosh = dist_to_target <= max(self.attack_range + 16.0, 54.0)
+        if not in_mosh:
+            target_offset = 0.0
+        else:
+            neighbors = 0
+            for other in allies + enemies:
+                if other is self or not other.alive or other.kind == "archidon":
+                    continue
+                if abs(other.x - self.x) <= 18.0:
+                    neighbors += 1
+            # Apilamiento escalonado en montículo compacto según densidad en el choque
+            tier = min(4, neighbors // 2)
+            slot_wave = abs(math.sin(self.idx * 1.7 + neighbors * 0.65))
+            target_offset = -min(14.0, tier * 2.6 + slot_wave * 3.2)
+
+        blend = min(1.0, dt * 11.0)
+        self.pile_offset_y += (target_offset - self.pile_offset_y) * blend
 
     def _clamp_behind_allied_lanzatonios(
         self,
@@ -466,7 +497,7 @@ class Fighter:
         lanzatonios = [a for a in allies if a.alive and a.kind == "lanzatonio"]
         if not lanzatonios:
             return next_x
-        buffer_px = 14.0
+        buffer_px = 6.0
         if self.team == "A":
             front_lanz_x = max(a.x for a in lanzatonios)
             return min(next_x, front_lanz_x - buffer_px)
@@ -506,6 +537,7 @@ class Fighter:
         dist = abs(target.x - self.x)
         direction = 1.0 if target.x >= self.x else -1.0
         crowd_push = self._compute_crowd_push(allies, enemies, target)
+        self._update_pile_offset(dt, allies, enemies, dist)
 
         can_throw_shuriken = (
             self.kind == "ninja"
@@ -514,9 +546,8 @@ class Fighter:
         )
 
         if can_throw_shuriken:
-            # Avanza a ritmo controlado mientras hostiga a distancia con estrellas ninja
             move_vx = direction * (self.speed * 0.65) + crowd_push * (
-                self.speed * 0.35
+                self.speed * 0.25
             )
             prev_x = self.x
             next_x = max(60.0, min(float(world_w - 60), self.x + move_vx * dt))
@@ -542,7 +573,7 @@ class Fighter:
                     )
                 )
         elif dist > self.attack_range:
-            move_vx = direction * self.speed + crowd_push * (self.speed * 0.45)
+            move_vx = direction * self.speed + crowd_push * (self.speed * 0.25)
             prev_x = self.x
             next_x = self.x + move_vx * dt
             next_x = max(60.0, min(float(world_w - 60), next_x))
@@ -550,8 +581,8 @@ class Fighter:
             if abs(self.x - prev_x) > 0.05:
                 self.walk_phase += dt * (self.speed * 0.14)
         else:
-            if self.kind != "archidon" and abs(crowd_push) > 0.08:
-                adjusted_x = self.x + crowd_push * (self.speed * 0.35) * dt
+            if self.kind != "archidon" and abs(crowd_push) > 0.05:
+                adjusted_x = self.x + crowd_push * (self.speed * 0.20) * dt
                 adjusted_x = max(60.0, min(float(world_w - 60), adjusted_x))
                 adjusted_x = self._clamp_behind_allied_lanzatonios(
                     adjusted_x, allies
@@ -618,7 +649,9 @@ class Fighter:
         if self.leap_timer > 0.0 and self.leap_duration > 0.0:
             progress = 1.0 - (self.leap_timer / self.leap_duration)
             leap_offset = math.sin(progress * math.pi) * self.leap_height
-        effective_ground_y = int(round(self.ground_y - leap_offset))
+        effective_ground_y = int(
+            round(self.ground_y - leap_offset + self.pile_offset_y)
+        )
         draw_fighter_visual(
             screen,
             cam_x,
