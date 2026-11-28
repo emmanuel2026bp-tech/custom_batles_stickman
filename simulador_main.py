@@ -162,7 +162,7 @@ def _spread_melee_combatants(
     world_w: int,
     eff_dt: float,
 ) -> None:
-    """Agrupa las unidades cuerpo a cuerpo en un cúmulo compacto durante el choque."""
+    """Agrupa las unidades cuerpo a cuerpo cerca del frente manteniendo una separación limpia."""
     if eff_dt <= 0.0:
         return
     alive_enemies = [e for e in enemies if e.alive]
@@ -182,33 +182,33 @@ def _spread_melee_combatants(
         return
 
     engaged = [
-        f for f in melee_allies if min(abs(e.x - f.x) for e in alive_enemies) < 75.0
+        f for f in melee_allies if min(abs(e.x - f.x) for e in alive_enemies) < 85.0
     ]
     if len(engaged) >= 2:
         cluster_center_x = sum(f.x for f in engaged) / len(engaged)
-        pull_step = min(45.0 * eff_dt, 2.2)
+        pull_step = min(55.0 * eff_dt, 2.5)
         for f in engaged:
             delta = cluster_center_x - f.x
-            if abs(delta) > 8.0:
+            if abs(delta) > 22.0:
                 f.x = max(
                     min_x,
                     min(
                         max_x,
-                        f.x + math.copysign(min(pull_step, abs(delta) * 0.25), delta),
+                        f.x + math.copysign(min(pull_step, abs(delta) * 0.22), delta),
                     ),
                 )
 
-    min_melee_sep = 6.5
-    step_push = min(45.0 * eff_dt, 2.0)
+    min_melee_sep = 20.0
+    step_push = min(90.0 * eff_dt, 4.5)
 
     for i in range(n):
         fa = melee_allies[i]
-        near_enemy_a = min(abs(e.x - fa.x) for e in alive_enemies) < 85.0
+        near_enemy_a = min(abs(e.x - fa.x) for e in alive_enemies) < 95.0
         if not near_enemy_a:
             continue
         for j in range(i + 1, n):
             fb = melee_allies[j]
-            near_enemy_b = min(abs(e.x - fb.x) for e in alive_enemies) < 85.0
+            near_enemy_b = min(abs(e.x - fb.x) for e in alive_enemies) < 95.0
             if not near_enemy_b:
                 continue
 
@@ -220,7 +220,7 @@ def _spread_melee_combatants(
                 else:
                     direction = 1.0 if dx > 0.0 else -1.0
 
-                push = min(step_push, (min_melee_sep - dist) * 0.35)
+                push = min(step_push, (min_melee_sep - dist) * 0.45)
                 na = fa.x - direction * push
                 nb = fb.x + direction * push
 
@@ -404,8 +404,6 @@ def _unstuck_edge_fighters(
                 f.vx = inward_dir * 85.0
             if hasattr(f, "facing"):
                 f.facing = 1 if inward_dir > 0 else -1
-            if hasattr(f, "vy") and getattr(f, "vy", 0.0) >= 0.0:
-                f.vy = -120.0
 
 
 def _apply_new_terrain(
@@ -419,15 +417,8 @@ def _apply_new_terrain(
     for f in fighters_a + fighters_b:
         if hasattr(f, "ground_y"):
             f.ground_y = new_ground_y
-        if f.alive:
-            if hasattr(f, "y"):
-                f.y = float(new_ground_y)
-            if hasattr(f, "vy"):
-                f.vy = 0.0
-            if hasattr(f, "on_ground"):
-                f.on_ground = True
-            if hasattr(f, "is_jumping"):
-                f.is_jumping = False
+        if hasattr(f, "pile_offset_y"):
+            f.pile_offset_y = 0.0
     return new_ground_y
 
 
@@ -870,7 +861,6 @@ def run_auto_battle() -> None:
                     bg.set_menu_terrain()
                     go_to_start_menu = True
                     break
-                # "editor" o cualquier salida del combate regresa directo al editor
                 break
 
             if go_to_start_menu:

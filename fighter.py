@@ -440,7 +440,6 @@ class Fighter:
     ) -> float:
         if self.kind == "archidon":
             return 0.0
-        # Separación compacta para que las unidades se apelotonen en un cúmulo denso
         min_sep = 7.0
         push = 0.0
         for other in allies + enemies:
@@ -465,27 +464,10 @@ class Fighter:
         enemies: list["Fighter"],
         dist_to_target: float,
     ) -> None:
-        if self.kind == "archidon":
-            self.pile_offset_y = max(0.0, self.pile_offset_y - 45.0 * dt)
-            return
-
-        in_mosh = dist_to_target <= max(self.attack_range + 16.0, 54.0)
-        if not in_mosh:
-            target_offset = 0.0
-        else:
-            neighbors = 0
-            for other in allies + enemies:
-                if other is self or not other.alive or other.kind == "archidon":
-                    continue
-                if abs(other.x - self.x) <= 18.0:
-                    neighbors += 1
-            # Apilamiento escalonado en montículo compacto según densidad en el choque
-            tier = min(4, neighbors // 2)
-            slot_wave = abs(math.sin(self.idx * 1.7 + neighbors * 0.65))
-            target_offset = -min(14.0, tier * 2.6 + slot_wave * 3.2)
-
-        blend = min(1.0, dt * 11.0)
-        self.pile_offset_y += (target_offset - self.pile_offset_y) * blend
+        _ = (allies, enemies, dist_to_target)
+        # Mantener siempre en el suelo al chocar para evitar que se eleven
+        blend = min(1.0, dt * 16.0)
+        self.pile_offset_y += (0.0 - self.pile_offset_y) * blend
 
     def _clamp_behind_allied_lanzatonios(
         self,
