@@ -35,6 +35,7 @@ from matchups import (
     normalize_kind,
 )
 from ui_screens import (
+    build_end_overlay_buttons,
     build_hud_buttons,
     draw_battle_hud,
     draw_end_overlay,
@@ -479,7 +480,6 @@ def _compute_camera_x(
             other_x = _closest_to_center_x(other_group, world_w)
             focus_x = ref_x * 0.72 + other_x * 0.28
 
-    # Amplía ligeramente el margen de encuadre para mostrar más batalla alrededor del punto de enfoque
     effective_view_w = min(float(world_w), float(screen_w) * 1.18)
     max_cam = max(0.0, float(world_w - screen_w))
     target_cam = max(0.0, min(max_cam, focus_x - effective_view_w * 0.5))
@@ -540,11 +540,18 @@ def _run_combat_loop(
     while True:
         raw_dt = clock.tick(60) / 1000.0
         dt = min(0.05, max(0.0, raw_dt))
+        screen = pygame.display.get_surface() or screen
+        sw, sh = screen.get_size()
 
         hud_buttons = build_hud_buttons(
-            screen.get_width(),
+            sw,
             paused=paused,
             sim_speed=sim_speed,
+        )
+        end_buttons = (
+            build_end_overlay_buttons(sw, sh)
+            if winner_team is not None
+            else {}
         )
 
         for event in pygame.event.get():
@@ -571,6 +578,15 @@ def _run_combat_loop(
                     sim_speed = 4.0
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
+                if winner_team is not None:
+                    restart_rect = end_buttons.get("restart")
+                    editor_rect = end_buttons.get("editor")
+                    if restart_rect is not None and restart_rect.collidepoint(mx, my):
+                        return "restart"
+                    if editor_rect is not None and editor_rect.collidepoint(mx, my):
+                        return "menu"
+                    continue
+
                 for btn_id, rect in hud_buttons.items():
                     if rect.collidepoint(mx, my):
                         if btn_id == "pause" and winner_team is None:
@@ -692,7 +708,7 @@ def _run_combat_loop(
             fighters_b,
             cam_x,
             world_w,
-            screen.get_width(),
+            sw,
             rng,
             tie_focus_team,
         )
@@ -748,6 +764,7 @@ def _run_combat_loop(
                 fighters_a=fighters_a,
                 fighters_b=fighters_b,
                 elapsed_time=elapsed_time,
+                buttons=end_buttons,
             )
 
         pygame.display.flip()

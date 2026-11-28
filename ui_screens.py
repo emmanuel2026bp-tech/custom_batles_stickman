@@ -923,7 +923,6 @@ def draw_battle_hud(
             ),
         )
 
-    # Panel de preset / modo (Preset, Aleatoria o Customizada)
     left_controls_end = (restart_rect.right + 12) if restart_rect is not None else 150
     info_w = min(290, max(160, sw - left_controls_end - 12))
     info_x = sw - info_w - 10
@@ -984,6 +983,31 @@ def draw_pause_overlay(
     screen.blit(hint, (sw // 2 - hint.get_width() // 2, sh // 2 + 12))
 
 
+def build_end_overlay_buttons(
+    screen_w: int,
+    screen_h: int,
+) -> dict[str, pygame.Rect]:
+    box_w = min(540, max(320, screen_w - 40))
+    box_h = 236
+    box = pygame.Rect(
+        screen_w // 2 - box_w // 2,
+        screen_h // 2 - box_h // 2,
+        box_w,
+        box_h,
+    )
+    btn_w = min(156, max(110, (box.w - 60) // 2))
+    btn_h = 36
+    gap = 18
+    total_w = btn_w * 2 + gap
+    start_x = box.centerx - total_w // 2
+    btn_y = box.bottom - 76
+
+    return {
+        "restart": pygame.Rect(start_x, btn_y, btn_w, btn_h),
+        "editor": pygame.Rect(start_x + btn_w + gap, btn_y, btn_w, btn_h),
+    }
+
+
 def draw_end_overlay(
     screen: pygame.Surface,
     font_small: Font,
@@ -994,7 +1018,8 @@ def draw_end_overlay(
     fighters_a: list[Fighter],
     fighters_b: list[Fighter],
     elapsed_time: float,
-) -> None:
+    buttons: dict[str, pygame.Rect] | None = None,
+) -> dict[str, pygame.Rect]:
     sw, sh = screen.get_size()
     dim = pygame.Surface((sw, sh), pygame.SRCALPHA)
     dim.fill((8, 10, 16, 168))
@@ -1010,25 +1035,66 @@ def draw_end_overlay(
         banner_txt = "¡EMPATE!"
         banner_col = (224, 232, 244)
 
-    box = pygame.Rect(sw // 2 - 270, sh // 2 - 105, 540, 210)
+    box_w = min(540, max(320, sw - 40))
+    box_h = 236
+    box = pygame.Rect(sw // 2 - box_w // 2, sh // 2 - box_h // 2, box_w, box_h)
     pygame.draw.rect(screen, (22, 27, 37), box, border_radius=10)
     pygame.draw.rect(screen, banner_col, box, width=2, border_radius=10)
 
-    title_surf = font_large.render(banner_txt, True, banner_col)
-    screen.blit(title_surf, (sw // 2 - title_surf.get_width() // 2, box.top + 22))
+    title_surf = _fit_text(
+        banner_txt,
+        max(120, box.w - 32),
+        (font_large, font_med),
+        banner_col,
+    )
+    screen.blit(
+        title_surf, (box.centerx - title_surf.get_width() // 2, box.top + 20)
+    )
 
     alive_a = sum(1 for f in fighters_a if f.alive)
     alive_b = sum(1 for f in fighters_b if f.alive)
-    stats_surf = font_med.render(
+    stats_surf = _fit_text(
         f"Sobrevivientes — A: {alive_a}  |  B: {alive_b}  |  {elapsed_time:.1f}s",
-        True,
+        max(120, box.w - 32),
+        (font_med, font_small),
         (225, 233, 245),
     )
-    screen.blit(stats_surf, (sw // 2 - stats_surf.get_width() // 2, box.top + 84))
+    screen.blit(
+        stats_surf, (box.centerx - stats_surf.get_width() // 2, box.top + 76)
+    )
 
-    hint_surf = font_small.render(
-        "Pulsa R para revancha  |  Pulsa M o ESC para volver al menú",
-        True,
+    btn_map = buttons or build_end_overlay_buttons(sw, sh)
+    mouse_pos = pygame.mouse.get_pos()
+
+    btn_specs = (
+        ("restart", "Reiniciar", (46, 118, 172), (68, 152, 214)),
+        ("editor", "Editor", (58, 66, 92), (82, 94, 128)),
+    )
+    for btn_id, label_txt, base_col, hover_col in btn_specs:
+        rect = btn_map.get(btn_id)
+        if rect is None:
+            continue
+        is_hover = rect.collidepoint(mouse_pos)
+        fill = hover_col if is_hover else base_col
+        border = (245, 248, 252) if is_hover else (175, 188, 212)
+        pygame.draw.rect(screen, fill, rect, border_radius=6)
+        pygame.draw.rect(screen, border, rect, width=1, border_radius=6)
+        lbl = font_med.render(label_txt, True, (250, 252, 255))
+        screen.blit(
+            lbl,
+            (
+                rect.centerx - lbl.get_width() // 2,
+                rect.centery - lbl.get_height() // 2,
+            ),
+        )
+
+    hint_surf = _fit_text(
+        "Pulsa R para reiniciar  |  Pulsa M o ESC para volver al editor",
+        max(120, box.w - 32),
+        (font_small,),
         (170, 184, 206),
     )
-    screen.blit(hint_surf, (sw // 2 - hint_surf.get_width() // 2, box.bottom - 38))
+    screen.blit(
+        hint_surf, (box.centerx - hint_surf.get_width() // 2, box.bottom - 28)
+    )
+    return btn_map
