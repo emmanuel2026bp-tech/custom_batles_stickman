@@ -25,18 +25,15 @@ from game_config import (
 )
 from matchups import (
     ACTIVE_MATCHUP,
-    MATCHUPS,
-    RANDOM_MATCHUP_KEY,
-    RANDOM_TARGET_POPULATION,
     UNIT_POP_COST,
-    generate_random_armies,
-    get_matchup_armies,
     get_matchup_label,
     normalize_kind,
 )
 from ui_screens import (
+    UNIT_ORDER,
     build_end_overlay_buttons,
     build_hud_buttons,
+    build_pause_overlay_buttons,
     draw_battle_hud,
     draw_end_overlay,
     draw_pause_overlay,
@@ -548,6 +545,11 @@ def _run_combat_loop(
             paused=paused,
             sim_speed=sim_speed,
         )
+        pause_buttons = (
+            build_pause_overlay_buttons(sw, sh)
+            if paused and winner_team is None
+            else {}
+        )
         end_buttons = (
             build_end_overlay_buttons(sw, sh)
             if winner_team is not None
@@ -560,14 +562,17 @@ def _run_combat_loop(
                 sys.exit(0)
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    return "menu"
+                    if paused and winner_team is None:
+                        paused = False
+                    else:
+                        return "editor"
                 elif event.key in (pygame.K_SPACE, pygame.K_p):
                     if winner_team is None:
                         paused = not paused
                 elif event.key == pygame.K_r:
                     return "restart"
                 elif event.key == pygame.K_m:
-                    return "menu"
+                    return "editor"
                 elif event.key in (pygame.K_t, pygame.K_g):
                     ground_y = _apply_new_terrain(bg, rng, fighters_a, fighters_b)
                 elif event.key == pygame.K_1:
@@ -578,13 +583,26 @@ def _run_combat_loop(
                     sim_speed = 4.0
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
+                if paused and winner_team is None:
+                    restart_rect = pause_buttons.get("restart")
+                    resume_rect = pause_buttons.get("resume")
+                    editor_rect = pause_buttons.get("editor")
+                    if restart_rect is not None and restart_rect.collidepoint(mx, my):
+                        return "restart"
+                    if resume_rect is not None and resume_rect.collidepoint(mx, my):
+                        paused = False
+                        continue
+                    if editor_rect is not None and editor_rect.collidepoint(mx, my):
+                        return "editor"
+                    continue
+
                 if winner_team is not None:
                     restart_rect = end_buttons.get("restart")
                     editor_rect = end_buttons.get("editor")
                     if restart_rect is not None and restart_rect.collidepoint(mx, my):
                         return "restart"
                     if editor_rect is not None and editor_rect.collidepoint(mx, my):
-                        return "menu"
+                        return "editor"
                     continue
 
                 for btn_id, rect in hud_buttons.items():
@@ -600,7 +618,7 @@ def _run_combat_loop(
                         elif btn_id == "restart":
                             return "restart"
                         elif btn_id == "menu":
-                            return "menu"
+                            return "editor"
 
         if not paused:
             eff_dt = dt * sim_speed
@@ -753,7 +771,13 @@ def _run_combat_loop(
         )
 
         if paused and winner_team is None:
-            draw_pause_overlay(screen, font_med, font_large)
+            draw_pause_overlay(
+                screen,
+                font_med,
+                font_large,
+                buttons=pause_buttons,
+                font_small=font_small,
+            )
         elif winner_team is not None:
             draw_end_overlay(
                 screen,
@@ -787,56 +811,70 @@ def run_auto_battle() -> None:
     )
     rng = random.Random()
     last_preset = ACTIVE_MATCHUP
+    last_counts_a: dict[str, int] | None = None
+    last_counts_b: dict[str, int] | None = None
+    last_match_mode: str | None = None
 
     while True:
         if not run_start_menu(screen, clock, bg):
             break
 
-        selected = run_match_editor(
-            screen,
-            clock,
-            bg,
-            rng,
-            initial_preset=last_preset,
-        )
-        if selected is None:
-            continue
-
-        preset_key, roster_a, roster_b, match_mode = selected
-        last_preset = preset_key
-        matchup_label = (
-            "Partida Aleatoria"
-            if match_mode == "random"
-            else get_matchup_label(preset_key)
-        )
-
         while True:
-            action = _run_combat_loop(
+            selected = run_match_editor(
                 screen,
                 clock,
-                font_small,
-                font_med,
-                font_large,
                 bg,
-                matchup_key=preset_key,
-                matchup_label=matchup_label,
-                match_mode=match_mode,
-                roster_a=roster_a,
-                roster_b=roster_b,
-                rng=rng,
+                rng,
+                initial_preset=last_preset,
+                initial_counts_a=last_counts_a,
+                initial_counts_b=last_counts_b,
+                initial_match_mode=last_match_mode,
             )
-            if action == "restart":
-                if match_mode == "random" or preset_key == RANDOM_MATCHUP_KEY:
-                    roster_a, roster_b = generate_random_armies(
-                        target_pop=RANDOM_TARGET_POPULATION, rng=rng
-                    )
-                elif match_mode == "custom":
-                    pass
-                elif preset_key in MATCHUPS:
-                    roster_a, roster_b = get_matchup_armies(preset_key, rng=rng)
-                continue
-            bg.set_menu_terrain()
-            break
+            if selected == "quit":
+                pygame.quit()
+                sys.exit(0)
+            if selected == "start_menu":
+                bg.set_menu_terrain()
+                break
+
+            preset_key, roster_a, roster_b, match_mode, snap_a, snap_b = selected
+            last_preset = preset_key
+            last_counts_a = {k: int(snap_a[k]) for k in UNIT_ORDER}
+            last_counts_b = {k: int(snap_b[k]) for k in UNIT_ORDER}
+            last_match_mode = match_mode
+            matchup_label = (
+                "Partida Aleatoria"
+                if match_mode == "random"
+                else get_matchup_label(preset_key)
+            )
+
+            go_to_start_menu = False
+            while True:
+                action = _run_combat_loop(
+                    screen,
+                    clock,
+                    font_small,
+                    font_med,
+                    font_large,
+                    bg,
+                    matchup_key=preset_key,
+                    matchup_label=matchup_label,
+                    match_mode=match_mode,
+                    roster_a=roster_a,
+                    roster_b=roster_b,
+                    rng=rng,
+                )
+                if action == "restart":
+                    continue
+                if action == "start_menu":
+                    bg.set_menu_terrain()
+                    go_to_start_menu = True
+                    break
+                # "editor" o cualquier salida del combate regresa directo al editor
+                break
+
+            if go_to_start_menu:
+                break
 
     pygame.quit()
 

@@ -250,7 +250,8 @@ def run_match_editor(
     initial_preset: str = ACTIVE_MATCHUP,
     initial_counts_a: dict[str, int] | None = None,
     initial_counts_b: dict[str, int] | None = None,
-) -> tuple[str, list[str], list[str], str] | None:
+    initial_match_mode: str | None = None,
+) -> tuple[str, list[str], list[str], str, dict[str, int], dict[str, int]] | str:
     font_title = pygame.font.SysFont("consolas", 26, bold=True)
     font_header = pygame.font.SysFont("consolas", 15, bold=True)
     font_item = pygame.font.SysFont("consolas", 14, bold=True)
@@ -265,17 +266,20 @@ def run_match_editor(
     counts_a, counts_b, pop_cap = _resolve_preset_counts(current_preset, rng)
     preset_base_a = {k: v for k, v in counts_a.items()}
     preset_base_b = {k: v for k, v in counts_b.items()}
-    is_random_mode = current_preset == RANDOM_MATCHUP_KEY
+    is_random_mode = (
+        initial_match_mode == "random"
+        if initial_match_mode is not None
+        else current_preset == RANDOM_MATCHUP_KEY
+    )
 
-    if not is_random_mode:
-        if initial_counts_a is not None:
-            counts_a = {
-                k: max(0, int(initial_counts_a.get(k, 0))) for k in UNIT_ORDER
-            }
-        if initial_counts_b is not None:
-            counts_b = {
-                k: max(0, int(initial_counts_b.get(k, 0))) for k in UNIT_ORDER
-            }
+    if initial_counts_a is not None:
+        counts_a = {
+            k: max(0, int(initial_counts_a.get(k, 0))) for k in UNIT_ORDER
+        }
+    if initial_counts_b is not None:
+        counts_b = {
+            k: max(0, int(initial_counts_b.get(k, 0))) for k in UNIT_ORDER
+        }
 
     resize_ignore_timer = 0.0
 
@@ -286,12 +290,18 @@ def run_match_editor(
             return "custom"
         return "preset"
 
-    def _finish_selection() -> tuple[str, list[str], list[str], str]:
+    def _finish_selection() -> tuple[
+        str, list[str], list[str], str, dict[str, int], dict[str, int]
+    ]:
+        snap_a = {k: int(counts_a[k]) for k in UNIT_ORDER}
+        snap_b = {k: int(counts_b[k]) for k in UNIT_ORDER}
         return (
             current_preset,
-            roster_from_counts(counts_a),
-            roster_from_counts(counts_b),
+            roster_from_counts(snap_a),
+            roster_from_counts(snap_b),
             _compute_match_mode(),
+            snap_a,
+            snap_b,
         )
 
     def apply_preset(key: str) -> None:
@@ -403,13 +413,13 @@ def run_match_editor(
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return None
+                return "quit"
             if event.type == pygame.VIDEORESIZE and resize_ignore_timer <= 0.0:
                 screen = pygame.display.get_surface() or screen
                 _sync_bg(screen, bg)
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    return None
+                    return "start_menu"
                 if event.key == pygame.K_RETURN:
                     return _finish_selection()
                 if event.key == pygame.K_LEFT:
@@ -476,7 +486,7 @@ def run_match_editor(
                     units_a = _team_units_count(counts_a)
                     units_b = _team_units_count(counts_b)
                 elif start_menu_btn.collidepoint(pos):
-                    return None
+                    return "start_menu"
                 elif play_btn.collidepoint(pos):
                     return _finish_selection()
                 else:
@@ -568,11 +578,11 @@ def run_match_editor(
         mode_preview = _compute_match_mode()
         mode_suffix = {
             "random": "Aleatorio",
-            "custom": "Customizada",
+            "custom": "Libre / Custom",
             "preset": "Preset",
         }[mode_preview]
         preset_label_txt = (
-            f"Preset: {get_matchup_label(current_preset)} [{mode_suffix}] (Ref {pop_cap} Pob)"
+            f"Preset: {get_matchup_label(current_preset)} [{mode_suffix}] • Sin límite"
         )
         max_preset_w = max(80, clear_btn.left - (next_btn.right + 22))
         preset_lbl = _fit_text(
@@ -779,7 +789,7 @@ def run_match_editor(
         )
 
         hint = font_small.render(
-            "Izq/Der: preset • Enter: iniciar • ESC: inicio",
+            "Edición libre sin límites • Izq/Der: preset • Enter: iniciar • ESC: inicio",
             True,
             (190, 194, 208),
         )
@@ -963,24 +973,115 @@ def draw_battle_hud(
     return btn_map
 
 
+def build_pause_overlay_buttons(
+    screen_w: int,
+    screen_h: int,
+) -> dict[str, pygame.Rect]:
+    box_w = min(560, max(340, screen_w - 40))
+    box_h = 228
+    box = pygame.Rect(
+        screen_w // 2 - box_w // 2,
+        screen_h // 2 - box_h // 2,
+        box_w,
+        box_h,
+    )
+    btn_h = 38
+    gap = 14
+    avail_w = box.w - 48 - gap * 2
+    btn_w = max(92, avail_w // 3)
+    total_w = btn_w * 3 + gap * 2
+    start_x = box.centerx - total_w // 2
+    btn_y = box.bottom - 78
+
+    return {
+        "restart": pygame.Rect(start_x, btn_y, btn_w, btn_h),
+        "resume": pygame.Rect(start_x + btn_w + gap, btn_y, btn_w, btn_h),
+        "editor": pygame.Rect(start_x + (btn_w + gap) * 2, btn_y, btn_w, btn_h),
+    }
+
+
 def draw_pause_overlay(
     screen: pygame.Surface,
     font_med: Font,
     font_large: Font,
-) -> None:
+    buttons: dict[str, pygame.Rect] | None = None,
+    font_small: Font | None = None,
+) -> dict[str, pygame.Rect]:
     sw, sh = screen.get_size()
     dim = pygame.Surface((sw, sh), pygame.SRCALPHA)
-    dim.fill((8, 10, 16, 155))
+    dim.fill((8, 10, 16, 168))
     screen.blit(dim, (0, 0))
 
-    title = font_large.render("BATALLA EN PAUSA", True, (245, 248, 255))
-    hint = font_med.render(
-        "ESPACIO o ESC para continuar  |  R reiniciar  |  M menú",
-        True,
-        (195, 208, 228),
+    box_w = min(560, max(340, sw - 40))
+    box_h = 228
+    box = pygame.Rect(sw // 2 - box_w // 2, sh // 2 - box_h // 2, box_w, box_h)
+    accent_col = (246, 226, 146)
+
+    pygame.draw.rect(screen, (20, 24, 34), box, border_radius=12)
+    pygame.draw.rect(screen, accent_col, box, width=2, border_radius=12)
+
+    title_surf = _fit_text(
+        "BATALLA EN PAUSA",
+        max(120, box.w - 32),
+        (font_large, font_med),
+        accent_col,
     )
-    screen.blit(title, (sw // 2 - title.get_width() // 2, sh // 2 - 42))
-    screen.blit(hint, (sw // 2 - hint.get_width() // 2, sh // 2 + 12))
+    screen.blit(
+        title_surf, (box.centerx - title_surf.get_width() // 2, box.top + 20)
+    )
+
+    helper_font = font_small or font_med
+    sub_surf = _fit_text(
+        "Selecciona una acción para continuar",
+        max(120, box.w - 32),
+        (font_med, helper_font),
+        (210, 218, 234),
+    )
+    screen.blit(
+        sub_surf, (box.centerx - sub_surf.get_width() // 2, box.top + 72)
+    )
+
+    btn_map = buttons or build_pause_overlay_buttons(sw, sh)
+    mouse_pos = pygame.mouse.get_pos()
+
+    btn_specs = (
+        ("restart", "Reiniciar", (46, 118, 172), (68, 152, 214)),
+        ("resume", "Volver", (44, 122, 82), (62, 156, 108)),
+        ("editor", "Editor", (58, 66, 92), (82, 94, 128)),
+    )
+    for btn_id, label_txt, base_col, hover_col in btn_specs:
+        rect = btn_map.get(btn_id)
+        if rect is None:
+            continue
+        is_hover = rect.collidepoint(mouse_pos)
+        fill = hover_col if is_hover else base_col
+        border = (250, 252, 255) if is_hover else (178, 192, 216)
+        pygame.draw.rect(screen, fill, rect, border_radius=7)
+        pygame.draw.rect(screen, border, rect, width=1, border_radius=7)
+        lbl = _fit_text(
+            label_txt,
+            max(36, rect.w - 12),
+            (font_med, helper_font),
+            (250, 252, 255),
+        )
+        screen.blit(
+            lbl,
+            (
+                rect.centerx - lbl.get_width() // 2,
+                rect.centery - lbl.get_height() // 2,
+            ),
+        )
+
+    hint_surf = _fit_text(
+        "ESPACIO o ESC: Volver  •  R: Reiniciar  •  M: Editor",
+        max(120, box.w - 32),
+        (helper_font,),
+        (165, 178, 200),
+    )
+    screen.blit(
+        hint_surf, (box.centerx - hint_surf.get_width() // 2, box.bottom - 26)
+    )
+    return btn_map
 
 
 def build_end_overlay_buttons(

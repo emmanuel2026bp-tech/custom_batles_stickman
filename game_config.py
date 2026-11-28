@@ -57,7 +57,7 @@ UNIT_STATS: dict[str, dict[str, object]] = {
             "sword": 15.0 / 10.0,
             "archidon": 18.0 / 10,
             "lanzatonio": 12.0 / 10.0,
-            "ninja": 1.0,
+            "ninja": 15.0 / 10.0,
         },
     },
     "lanzatonio": {
@@ -163,8 +163,8 @@ GLOBAL_FIGHT_PRESETS: tuple[
     (
         "apocalipsis_210p",
         "Cataclismo Total",
-        {"sword": 30, "archidon": 29, "lanzatonio": 30, "ninja": 8},
-        {"sword": 36, "archidon": 26, "lanzatonio": 30, "ninja": 8},
+        {"sword": 26, "archidon": 22, "lanzatonio": 20, "ninja": 20},
+        {"sword": 26, "archidon": 22, "lanzatonio": 20, "ninja": 20},
         210,
     ),
 )
