@@ -1,4 +1,4 @@
-('C:\\Users\\Usuario\\OneDrive\\Escritorio\\custom_batles_stickman\\build\\ArenaSimulador\\PYZ-00.pyz',
+('C:\\Users\\Usuario\\OneDrive\\Escritorio\\custom_batles_stickman\\build\\SimuladorBatallasStickman\\PYZ-00.pyz',
  [('PIL',
    'C:\\Users\\Usuario\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.12_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python312\\site-packages\\PIL\\__init__.py',
    'PYMODULE'),
@@ -405,9 +405,6 @@
   ('base64',
    'C:\\Program '
    'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\\Lib\\base64.py',
-   'PYMODULE'),
-  ('battle_hud',
-   'C:\\Users\\Usuario\\OneDrive\\Escritorio\\custom_batles_stickman\\battle_hud.py',
    'PYMODULE'),
   ('bdb',
    'C:\\Program '
@@ -1468,9 +1465,6 @@
   ('signal',
    'C:\\Program '
    'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.12_3.12.2800.0_x64__qbz5n2kfra8p0\\Lib\\signal.py',
-   'PYMODULE'),
-  ('simulador_main',
-   'C:\\Users\\Usuario\\OneDrive\\Escritorio\\custom_batles_stickman\\simulador_main.py',
    'PYMODULE'),
   ('socket',
    'C:\\Program '
